@@ -9,6 +9,9 @@ on:
       - '**/guest.csv'
       - '**/guests.csv'
 
+permissions:
+  contents: write
+
 jobs:
   convert:
     runs-on: ubuntu-latest
