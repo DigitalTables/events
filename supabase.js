@@ -1,10 +1,10 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// 🧠 À modifier avec tes vraies infos depuis Supabase > Settings > API
-const SUPABASE_URL = 'https://xrffjwulhrydrhlvuhlj.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co'
+const supabaseKey = process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
+
 
 // Sélecteurs DOM
 const email = document.getElementById('email');
