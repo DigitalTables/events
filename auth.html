@@ -5,10 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Supabase</title>
   <style>
-    #upload { display: none; margin-top: 20px; }
-    #logout { display: none; margin-top: 10px; }
-    input { display: block; margin: 5px 0; }
-    button { margin: 5px 0; }
+    #console {
+      background-color: #222;
+      color: white;
+      font-family: monospace;
+      padding: 10px;
+      margin-top: 20px;
+      height: 200px;
+      overflow-y: scroll;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -30,9 +36,25 @@
 
   <button id="logout">Déconnexion</button>
 
+  <!-- Ajoute un espace pour la console -->
+  <div id="console"></div>
+
   <!-- Supabase UMD -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <script src="supabase.js"></script>
+  <script>
+    // Fonction pour loguer les erreurs dans la div "console"
+    function logToConsole(message) {
+      const consoleDiv = document.getElementById('console');
+      const logMessage = document.createElement('p');
+      logMessage.textContent = message;
+      consoleDiv.appendChild(logMessage);
+    }
 
+    console.log = logToConsole;  // Rediriger `console.log` vers la div
+
+    console.log('Page chargée...');
+  </script>
+
+  <script src="supabase.js"></script>
 </body>
 </html>
