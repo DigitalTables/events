@@ -26,7 +26,14 @@
     </div>
   </section>
 
-    
+    <div id="auth">
+  <h3>Connexion</h3>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Mot de passe">
+  <button id="signup">Créer un compte</button>
+  <button id="login">Se connecter</button>
+  <button id="logout" style="display:none;">Se déconnecter</button>
+</div>
 
 <div id="upload" style="display:none;">
   <h3>Uploader ton CSV et tes images</h3>
@@ -36,6 +43,8 @@
 </div>
 
 <script type="module" src="supabase.js"></script>
+
+
 
   <footer>
     <div class="container">
