@@ -1,10 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// 🧠 À modifier avec tes vraies infos depuis Supabase > Settings > API
 const SUPABASE_URL = 'https://xrffjwulhrydrhlvuhlj.supabase.co';
-const SUPABASE_KEY = 'xrffjwulhrydrhlvuhlj';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Sélecteurs DOM
 const email = document.getElementById('email');
 const password = document.getElementById('password');
 const signup = document.getElementById('signup');
@@ -16,9 +18,13 @@ const sendBtn = document.getElementById('send');
 const csvInput = document.getElementById('csvFile');
 const imagesInput = document.getElementById('images');
 
-// Vérifie si déjà connecté
+// Vérifie la session au chargement
 supabase.auth.getSession().then(({ data }) => {
-  if (data.session) onLogin();
+  if (data.session) {
+    onLogin();
+  } else {
+    onLogout();
+  }
 });
 
 signup.onclick = async () => {
@@ -27,7 +33,7 @@ signup.onclick = async () => {
     password: password.value
   });
   if (error) alert('Erreur: ' + error.message);
-  else alert('Compte créé ! Vérifie ton email.');
+  else alert('Compte créé ! Vérifie ton email avant de te connecter.');
 };
 
 login.onclick = async () => {
@@ -41,9 +47,7 @@ login.onclick = async () => {
 
 logout.onclick = async () => {
   await supabase.auth.signOut();
-  authDiv.style.display = 'block';
-  uploadDiv.style.display = 'none';
-  logout.style.display = 'none';
+  onLogout();
 };
 
 function onLogin() {
@@ -52,25 +56,32 @@ function onLogin() {
   logout.style.display = 'inline-block';
 }
 
+function onLogout() {
+  authDiv.style.display = 'block';
+  uploadDiv.style.display = 'none';
+  logout.style.display = 'none';
+}
+
 // Upload fichiers
 sendBtn.onclick = async () => {
-  const user = (await supabase.auth.getUser()).data.user;
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
   if (!user) return alert("Non connecté.");
 
-  // 1️⃣ Upload CSV
+  // 1️⃣ Upload CSV vers le bucket 'data'
   const csv = csvInput.files[0];
   if (csv) {
-    const { error } = await supabase.storage.from('uploads')
+    const { error } = await supabase.storage.from('data')
       .upload(`${user.id}/${csv.name}`, csv, { upsert: true });
-    if (error) alert('Erreur upload CSV: ' + error.message);
+    if (error) return alert('Erreur upload CSV: ' + error.message);
   }
 
-  // 2️⃣ Upload images
+  // 2️⃣ Upload images vers le bucket 'images'
   const imgs = imagesInput.files;
   for (const img of imgs) {
-    const { error } = await supabase.storage.from('uploads')
-      .upload(`${user.id}/images/${img.name}`, img, { upsert: true });
-    if (error) alert('Erreur upload image: ' + error.message);
+    const { error } = await supabase.storage.from('images')
+      .upload(`${user.id}/${img.name}`, img, { upsert: true });
+    if (error) return alert('Erreur upload image: ' + error.message);
   }
 
   alert('Upload terminé ! 🎉');
