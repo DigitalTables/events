@@ -1,17 +1,38 @@
-<div id="auth">
-  <h3>Connexion</h3>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Mot de passe">
-  <button id="signup">Créer un compte</button>
-  <button id="login">Se connecter</button>
-  <button id="logout" style="display:none;">Se déconnecter</button>
-</div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion Supabase</title>
+  <style>
+    #upload { display: none; margin-top: 20px; }
+    #logout { display: none; margin-top: 10px; }
+    input { display: block; margin: 5px 0; }
+    button { margin: 5px 0; }
+  </style>
+</head>
+<body>
 
-<div id="upload" style="display:none;">
-  <h3>Uploader ton CSV et tes images</h3>
-  <input type="file" id="csvFile" accept=".csv"><br><br>
-  <input type="file" id="images" accept="image/*" multiple><br><br>
-  <button id="send">Envoyer</button>
-</div>
+  <div id="auth">
+    <h2>Connexion / Création de compte</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mot de passe">
+    <button id="signup">Créer un compte</button>
+    <button id="login">Se connecter</button>
+  </div>
 
-<script type="module" src="supabase.js"></script>
+  <div id="upload">
+    <h2>Upload fichiers</h2>
+    <input type="file" id="csvFile">
+    <input type="file" id="images" multiple>
+    <button id="send">Uploader</button>
+  </div>
+
+  <button id="logout">Déconnexion</button>
+
+  <!-- Supabase UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+  <script src="supabase.js"></script>
+
+</body>
+</html>
