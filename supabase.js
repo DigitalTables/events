@@ -1,22 +1,9 @@
+<script>
 console.log("✅ Fichier supabase.js chargé");
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg'
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Vérifie et restaure la session automatiquement
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log("🌀 Auth event:", event);
-  if (event === 'SIGNED_IN') onLogin();
-  if (event === 'SIGNED_OUT') {
-    authDiv.style.display = 'block';
-    uploadDiv.style.display = 'none';
-  }
-});
-
-
+const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // Sélecteurs DOM
 const email = document.getElementById('email');
@@ -30,38 +17,7 @@ const sendBtn = document.getElementById('send');
 const csvInput = document.getElementById('csvFile');
 const imagesInput = document.getElementById('images');
 
-// Vérifie la session au chargement
-supabase.auth.getSession().then(({ data }) => {
-  if (data.session) {
-    onLogin();
-  } else {
-    onLogout();
-  }
-});
-
-signup.onclick = async () => {
-  const { error } = await supabase.auth.signUp({
-    email: email.value,
-    password: password.value
-  });
-  if (error) alert('Erreur: ' + error.message);
-  else alert('Compte créé ! Vérifie ton email avant de te connecter.');
-};
-
-login.onclick = async () => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value
-  });
-  if (error) alert('Erreur: ' + error.message);
-  else onLogin();
-};
-
-logout.onclick = async () => {
-  await supabase.auth.signOut();
-  onLogout();
-};
-
+// Gestion de la session
 function onLogin() {
   authDiv.style.display = 'none';
   uploadDiv.style.display = 'block';
@@ -73,6 +29,36 @@ function onLogout() {
   uploadDiv.style.display = 'none';
   logout.style.display = 'none';
 }
+
+// Vérifie la session au chargement
+supabase.auth.getSession().then(({ data }) => {
+  if (data.session) onLogin();
+  else onLogout();
+});
+
+// Événements
+signup.onclick = async () => {
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
+  if (error) alert('Erreur: ' + error.message);
+  else alert('Compte créé ! Vérifie ton email avant de te connecter.');
+};
+
+login.onclick = async () => {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+  if (error) alert('Erreur: ' + error.message);
+  else onLogin();
+};
+
+logout.onclick = async () => {
+  await supabase.auth.signOut();
+  onLogout();
+};
 
 // Upload fichiers
 sendBtn.onclick = async () => {
@@ -98,3 +84,4 @@ sendBtn.onclick = async () => {
 
   alert('Upload terminé ! 🎉');
 };
+</script>
