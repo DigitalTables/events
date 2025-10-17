@@ -1,3 +1,4 @@
+console.log("✅ Fichier supabase.js chargé");
 
 import { createClient } from '@supabase/supabase-js'
 
