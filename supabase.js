@@ -5,6 +5,17 @@ const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co'
 const supabaseKey = process.env.SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// Vérifie et restaure la session automatiquement
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log("🌀 Auth event:", event);
+  if (event === 'SIGNED_IN') onLogin();
+  if (event === 'SIGNED_OUT') {
+    authDiv.style.display = 'block';
+    uploadDiv.style.display = 'none';
+  }
+});
+
+
 
 // Sélecteurs DOM
 const email = document.getElementById('email');
