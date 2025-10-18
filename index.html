@@ -6,13 +6,13 @@
   <title>DigitalTables – Attribution personnalisée des tables</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-  
 <body>
+
   <header>
     <div class="container">
       <div class="logo-title">
         <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
-        <h1>DigitalTables</h1><br>
+        <h1>DigitalTables</h1>
       </div>
     </div>
   </header>
@@ -25,7 +25,6 @@
     </div>
   </section>
 
-  <!-- Connexion / Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
     <h3>Connexion</h3>
     <input type="email" id="email" placeholder="Email">
@@ -35,7 +34,6 @@
     <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
 
-  <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
     <h3>Uploader ton CSV et tes images</h3>
     <input type="file" id="csvFile" accept=".csv"><br><br>
@@ -48,7 +46,8 @@
       <p>© 2025 DigitalTables. Tous droits réservés.</p>
     </div>
   </footer>
-  <script type="module" src="supabase.js"></script>
 
+  <!-- ⚡ Supabase JS en module -->
+  <script type="module" src="supabase.js"></script>
 </body>
 </html>
