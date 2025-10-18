@@ -1,9 +1,11 @@
-<script>
 console.log("✅ Fichier supabase.js chargé");
 
+// Initialisation du client Supabase (clé publique)
 const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+console.log("🔗 Supabase initialisé:", supabase);
 
 // Sélecteurs DOM
 const email = document.getElementById('email');
@@ -17,14 +19,16 @@ const sendBtn = document.getElementById('send');
 const csvInput = document.getElementById('csvFile');
 const imagesInput = document.getElementById('images');
 
-// Gestion de la session
+// Fonctions utilitaires d’affichage
 function onLogin() {
+  console.log("✅ Connexion réussie");
   authDiv.style.display = 'none';
   uploadDiv.style.display = 'block';
   logout.style.display = 'inline-block';
 }
 
 function onLogout() {
+  console.log("👋 Déconnexion");
   authDiv.style.display = 'block';
   uploadDiv.style.display = 'none';
   logout.style.display = 'none';
@@ -32,22 +36,26 @@ function onLogout() {
 
 // Vérifie la session au chargement
 supabase.auth.getSession().then(({ data }) => {
+  console.log("🔍 Session actuelle:", data);
   if (data.session) onLogin();
   else onLogout();
 });
 
-// Événements
+// === ÉVÉNEMENTS ===
+
 signup.onclick = async () => {
+  console.log("🟢 Tentative de création de compte...");
   const { error } = await supabase.auth.signUp({
     email: email.value,
     password: password.value
   });
   if (error) alert('Erreur: ' + error.message);
-  else alert('Compte créé ! Vérifie ton email avant de te connecter.');
+  else alert('✅ Compte créé ! Vérifie ton email avant de te connecter.');
 };
 
 login.onclick = async () => {
-  const { error } = await supabase.auth.signInWithPassword({
+  console.log("🟡 Tentative de connexion...");
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value
   });
@@ -56,17 +64,19 @@ login.onclick = async () => {
 };
 
 logout.onclick = async () => {
+  console.log("🔴 Déconnexion...");
   await supabase.auth.signOut();
   onLogout();
 };
 
-// Upload fichiers
+// === UPLOAD ===
 sendBtn.onclick = async () => {
+  console.log("📤 Début upload...");
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("Non connecté.");
 
-  // 1️⃣ Upload CSV vers le bucket 'data'
+  // Upload CSV
   const csv = csvInput.files[0];
   if (csv) {
     const { error } = await supabase.storage.from('data')
@@ -74,7 +84,7 @@ sendBtn.onclick = async () => {
     if (error) return alert('Erreur upload CSV: ' + error.message);
   }
 
-  // 2️⃣ Upload images vers le bucket 'images'
+  // Upload images
   const imgs = imagesInput.files;
   for (const img of imgs) {
     const { error } = await supabase.storage.from('images')
@@ -82,6 +92,5 @@ sendBtn.onclick = async () => {
     if (error) return alert('Erreur upload image: ' + error.message);
   }
 
-  alert('Upload terminé ! 🎉');
+  alert('🎉 Upload terminé !');
 };
-</script>
