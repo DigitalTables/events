@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DigitalTables – Attribution des tables personnalisée et unique pour vos invités</title>
+  <title>DigitalTables – Attribution personnalisée des tables</title>
   <link rel="stylesheet" href="style.css" />
 </head>
   
@@ -11,46 +11,47 @@
   <header>
     <div class="container">
       <div class="logo-title">
-  <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
-  <h1>DigitalTables</h1><br>
-</div>
+        <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
+        <h1>DigitalTables</h1><br>
+      </div>
     </div>
   </header>
 
   <section class="hero">
     <div class="container">
-      <h2>Attribuez facilement de manière personnalisée et originale la table de vos invités</h2>
-      <p>Un outil simple et rapide qui apporte une touche en plus à votre événement.</p> 
-      <p>Via smartphone ou tablette, chaque invité connait sa table avec un message unique personnalisé.</p>
-      <a href="#demo" class="btn">Voir la démo</a>
+      <h2>Attribuez facilement la table de vos invités</h2>
+      <p>Un outil simple et rapide qui apporte une touche unique à votre événement.</p> 
+      <a href="#auth" class="btn">Commencer</a>
     </div>
   </section>
 
-    <div id="auth">
-  <h3>Connexion</h3>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Mot de passe">
-  <button id="signup">Créer un compte</button>
-  <button id="login">Se connecter</button>
-  <button id="logout" style="display:none;">Se déconnecter</button>
-</div>
+  <!-- Connexion / Authentification -->
+  <div id="auth" style="text-align:center; margin-top:2rem;">
+    <h3>Connexion</h3>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mot de passe">
+    <button id="signup">Créer un compte</button>
+    <button id="login">Se connecter</button>
+    <button id="logout" style="display:none;">Se déconnecter</button>
+  </div>
 
-<div id="upload" style="display:none;">
-  <h3>Uploader ton CSV et tes images</h3>
-  <input type="file" id="csvFile" accept=".csv"><br><br>
-  <input type="file" id="images" accept="image/*" multiple><br><br>
-  <button id="send">Envoyer</button>
-</div>
+  <!-- Upload CSV + images -->
+  <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
+    <h3>Uploader ton CSV et tes images</h3>
+    <input type="file" id="csvFile" accept=".csv"><br><br>
+    <input type="file" id="images" accept="image/*" multiple><br><br>
+    <button id="send">Envoyer</button>
+  </div>
 
-<script type="module" src="supabase.js"></script>
-
-
+  <!-- ✅ Import UMD de Supabase (fonctionne sur mobile sans erreur MIME) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2.45.1/dist/umd/supabase.min.js"></script>
+  <!-- ✅ Ton script à toi -->
+  <script src="supabase.js"></script>
 
   <footer>
     <div class="container">
       <p>© 2025 DigitalTables. Tous droits réservés.</p>
     </div>
   </footer>
-  
 </body>
 </html>
