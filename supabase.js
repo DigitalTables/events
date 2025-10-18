@@ -1,3 +1,5 @@
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 console.log("✅ Fichier supabase.js chargé");
 // Initialisation du client Supabase (clé publique)
 const supabaseUrl = 'https://xrffjwulhrydrhlvuhlj.supabase.co';
