@@ -1,3 +1,4 @@
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 
 console.log("✅ Fichier supabase.js chargé");
@@ -36,6 +37,7 @@ function onLogout() {
 const params = new URLSearchParams(window.location.search);
 if (params.has('access_token')) {
   alert("✅ Ton compte est confirmé ! Connecte-toi maintenant.");
+  // Nettoie l'URL pour ne pas réafficher le message au rechargement
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
@@ -51,11 +53,11 @@ signup.onclick = async () => {
     email: email.value,
     password: password.value,
     options: {
-      emailRedirectTo: "https://digitaltables.github.io/events/" // URL GitHub Pages
+      emailRedirectTo: "https://digitaltables.github.io/events/" // redirection GitHub Pages
     }
   });
   if (error) alert('Erreur: ' + error.message);
-  else alert("✅ Compte créé ! Vérifie ton email.");
+  else alert("✅ Compte créé ! Vérifie ton email pour confirmer.");
 };
 
 login.onclick = async () => {
