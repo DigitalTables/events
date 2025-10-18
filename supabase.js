@@ -2,11 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 
 console.log("✅ Fichier supabase.js chargé");
 
+// --- Supabase ---
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Sélecteurs DOM
+// --- Sélecteurs DOM ---
 const email = document.getElementById('email');
 const password = document.getElementById('password');
 const signup = document.getElementById('signup');
@@ -18,7 +19,7 @@ const sendBtn = document.getElementById('send');
 const csvInput = document.getElementById('csvFile');
 const imagesInput = document.getElementById('images');
 
-// Gestion de session
+// --- Gestion de session ---
 function onLogin() {
   authDiv.style.display = 'none';
   uploadDiv.style.display = 'block';
@@ -31,20 +32,37 @@ function onLogout() {
   logout.style.display = 'none';
 }
 
+// --- Vérifie token de confirmation dans l'URL ---
+const params = new URLSearchParams(window.location.search);
+if (params.has('access_token')) {
+  alert("✅ Ton compte est confirmé ! Connecte-toi maintenant.");
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// --- Vérifie session au chargement ---
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) onLogin();
   else onLogout();
 });
 
-// Événements
+// --- Événements ---
 signup.onclick = async () => {
-  const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value,
+    options: {
+      emailRedirectTo: "https://digitaltables.github.io/events/" // URL GitHub Pages
+    }
+  });
   if (error) alert('Erreur: ' + error.message);
-  else alert('Compte créé, vérifie ton email.');
+  else alert("✅ Compte créé ! Vérifie ton email.");
 };
 
 login.onclick = async () => {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
   if (error) alert('Erreur: ' + error.message);
   else onLogin();
 };
@@ -54,11 +72,11 @@ logout.onclick = async () => {
   onLogout();
 };
 
-// Upload fichiers
+// --- Upload fichiers ---
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
-  if (!user) return alert("Non connecté.");
+  if (!user) return alert("❌ Non connecté.");
 
   const csv = csvInput.files[0];
   if (csv) {
@@ -72,6 +90,5 @@ sendBtn.onclick = async () => {
     if (error) return alert('Erreur upload image: ' + error.message);
   }
 
-  alert('Upload terminé ! 🎉');
+  alert("✅ Upload terminé !");
 };
-
