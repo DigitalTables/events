@@ -108,9 +108,9 @@ body {
 </div>
   <h1>Welcome to </h1>
   <h2>Woman @ Work</h2>
-  <h3>To know your table</h3>
-  <p>Input your name :</p>
-  <input type="text" id="nameInput" list="names" placeholder="Commencez à taper...">
+  <h3>Table</h3>
+  <p>Please nput your name to know your table :</p>
+  <input type="text" id="nameInput" list="names" placeholder="Start typing...">
   <datalist id="names"></datalist>
   <div class="result" id="result"></div>
 
@@ -120,7 +120,7 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
-const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
+const defaultMessage = "We are thrilled to have you today!";
 const inputEl = document.getElementById('nameInput');
 const resultEl = document.getElementById('result');
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTiQl_gENzf6fKuHR-CcMhyVB4O11vYoZWjUlMiXuv-8qwiVB77Q3cKioaEUmkXxW8-lKNncA2ZC5dI/pub?output=csv";
@@ -187,7 +187,7 @@ function showGuest(guest) {
   const message = guest.message || defaultMessage;
   let html = `<span style="color: inherit;">
                 ${message}<br><br>
-                <strong style="color: inherit;">Ta table est :</strong> ${guest.table}
+                <strong style="color: inherit;">Your table is :</strong> ${guest.table}
               </span>`;
   const img = tableImages[guest.table];
   if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
