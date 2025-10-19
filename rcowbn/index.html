@@ -108,7 +108,7 @@ body {
   <img src="../images/Logo.jpg" alt="Logo" class="logo-image">
 </div>
  
-  <h1>Bienvenue à </h1>
+  <h1>Bienvenue au </h1>
   <h2>Rothschild & Co Women business Network</h2>
 
   <p>Inscrivez votre nom pour connaître votre table</p>
@@ -189,7 +189,7 @@ function showGuest(guest) {
   const message = guest.message || defaultMessage;
   let html = `<span style="color: inherit;">
                 ${message}<br><br>
-                <strong style="color: inherit;">Your table is :</strong> ${guest.table}
+                <strong style="color: inherit;">Votre table est :</strong> ${guest.table}
               </span>`;
   const img = tableImages[guest.table];
   if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
