@@ -7,7 +7,7 @@ console.log("✅ Fichier supabase.js chargé");
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
 const supabase = createClient(supabaseUrl, supabaseKey);
-window.supabase = supabase; // accessible globalement
+window.supabase = supabase;
 
 // --- Sélecteurs DOM ---
 const email = document.getElementById('email');
@@ -80,7 +80,7 @@ logout.onclick = async () => {
   onLogout();
 };
 
-// --- Upload fichiers (CSV + images) ---
+// --- Upload fichiers ---
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -88,19 +88,17 @@ sendBtn.onclick = async () => {
 
   const csv = csvInput.files[0];
   if (csv) {
-    // Upload CSV brut pour respecter RGPD
+    // Upload CSV brut dans le bucket 'guests'
     const { error } = await supabase.storage
       .from('guests')
       .upload(`${user.id}/${csv.name}`, csv, {
         upsert: true,
-        contentType: 'text/csv'
+        contentType: 'text/csv' // ⚡ correction MIME Excel
       });
     if (error) return alert('Erreur upload CSV: ' + error.message);
 
     // --- Parsing côté client uniquement pour aperçu ---
     const text = await csv.text();
-
-    // Détection automatique du séparateur (`,` ou `;`)
     const delimiter = detectDelimiter(text);
 
     Papa.parse(text, {
@@ -110,7 +108,6 @@ sendBtn.onclick = async () => {
       complete: (results) => {
         console.log("Aperçu CSV :", results.data);
         alert(`✅ CSV uploadé. Aperçu : ${results.data.length} lignes détectées (côté navigateur).`);
-        // ❌ Ne stocke pas les données personnelles côté client !
       }
     });
   }
@@ -125,7 +122,7 @@ sendBtn.onclick = async () => {
   alert("✅ Upload terminé !");
 };
 
-// --- Détection du séparateur CSV ---
+// --- Détection automatique du séparateur CSV ---
 function detectDelimiter(text) {
   const firstLine = text.split(/\r?\n/)[0];
   const countComma = (firstLine.match(/,/g) || []).length;
