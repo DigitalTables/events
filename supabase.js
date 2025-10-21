@@ -90,7 +90,7 @@ sendBtn.onclick = async () => {
   if (csv) {
     // Upload CSV brut pour respecter RGPD
     const { error } = await supabase.storage
-      .from('data')
+      .from('guests')
       .upload(`${user.id}/${csv.name}`, csv, {
         upsert: true,
         contentType: 'text/csv'
