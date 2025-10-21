@@ -1,6 +1,5 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
-
+import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 console.log("✅ Fichier supabase.js chargé");
 
@@ -8,7 +7,8 @@ console.log("✅ Fichier supabase.js chargé");
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
 const supabase = createClient(supabaseUrl, supabaseKey);
-window.supabase = supabase; // rend supabase accessible globalement
+window.supabase = supabase; // accessible globalement
+
 // --- Sélecteurs DOM ---
 const email = document.getElementById('email');
 const password = document.getElementById('password');
@@ -34,27 +34,32 @@ function onLogout() {
   logout.style.display = 'none';
 }
 
-// --- Vérifie token de confirmation dans l'URL ---
+// Vérifie token de confirmation dans l'URL
 const params = new URLSearchParams(window.location.search);
 if (params.has('access_token')) {
   alert("✅ Ton compte est confirmé ! Connecte-toi maintenant.");
-  // Nettoie l'URL pour ne pas réafficher le message au rechargement
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-// --- Vérifie session au chargement ---
+// Vérifie session au chargement
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) onLogin();
   else onLogout();
 });
 
-// --- Événements ---
+// Écoute des changements de session
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session) onLogin();
+  else onLogout();
+});
+
+// --- Authentification ---
 signup.onclick = async () => {
   const { error } = await supabase.auth.signUp({
     email: email.value,
     password: password.value,
     options: {
-      emailRedirectTo: "https://digitaltables.github.io/events/" // redirection GitHub Pages
+      emailRedirectTo: "https://digitaltables.github.io/events/"
     }
   });
   if (error) alert('Erreur: ' + error.message);
@@ -75,7 +80,7 @@ logout.onclick = async () => {
   onLogout();
 };
 
-// --- Upload fichiers ---
+// --- Upload fichiers (CSV + images) ---
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -83,10 +88,34 @@ sendBtn.onclick = async () => {
 
   const csv = csvInput.files[0];
   if (csv) {
-    const { error } = await supabase.storage.from('guests').upload(`${user.id}/${csv.name}`, csv, { upsert: true });
+    // Upload CSV brut pour respecter RGPD
+    const { error } = await supabase.storage
+      .from('data')
+      .upload(`${user.id}/${csv.name}`, csv, {
+        upsert: true,
+        contentType: 'text/csv'
+      });
     if (error) return alert('Erreur upload CSV: ' + error.message);
+
+    // --- Parsing côté client uniquement pour aperçu ---
+    const text = await csv.text();
+
+    // Détection automatique du séparateur (`,` ou `;`)
+    const delimiter = detectDelimiter(text);
+
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter,
+      complete: (results) => {
+        console.log("Aperçu CSV :", results.data);
+        alert(`✅ CSV uploadé. Aperçu : ${results.data.length} lignes détectées (côté navigateur).`);
+        // ❌ Ne stocke pas les données personnelles côté client !
+      }
+    });
   }
 
+  // Upload des images
   const imgs = imagesInput.files;
   for (const img of imgs) {
     const { error } = await supabase.storage.from('images').upload(`${user.id}/${img.name}`, img, { upsert: true });
@@ -95,3 +124,11 @@ sendBtn.onclick = async () => {
 
   alert("✅ Upload terminé !");
 };
+
+// --- Détection du séparateur CSV ---
+function detectDelimiter(text) {
+  const firstLine = text.split(/\r?\n/)[0];
+  const countComma = (firstLine.match(/,/g) || []).length;
+  const countSemicolon = (firstLine.match(/;/g) || []).length;
+  return countSemicolon > countComma ? ";" : ",";
+}
