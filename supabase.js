@@ -83,7 +83,7 @@ sendBtn.onclick = async () => {
 
   const csv = csvInput.files[0];
   if (csv) {
-    const { error } = await supabase.storage.from('data').upload(`${user.id}/${csv.name}`, csv, { upsert: true });
+    const { error } = await supabase.storage.from('guests').upload(`${user.id}/${csv.name}`, csv, { upsert: true });
     if (error) return alert('Erreur upload CSV: ' + error.message);
   }
 
