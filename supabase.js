@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-console.log("✅ Fichier supabase.js chargé");
+console.log("✅ Fichier supabase.js new chargé");
 
 // --- Supabase ---
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
