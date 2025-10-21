@@ -18,7 +18,7 @@ const logout = document.getElementById('logout');
 const uploadDiv = document.getElementById('upload');
 const authDiv = document.getElementById('auth');
 const sendBtn = document.getElementById('send');
-const csvInput = document.getElementById('csvFile');
+const csvInput = document.getElementById('guests');
 const imagesInput = document.getElementById('images');
 
 // --- Gestion de session ---
