@@ -6,7 +6,7 @@ console.log("✅ Fichier supabase.js chargé");
 // --- Supabase ---
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 window.supabase = supabase;
 
 // --- Sélecteurs DOM ---
@@ -86,19 +86,20 @@ sendBtn.onclick = async () => {
   const user = userData?.user;
   if (!user) return alert("❌ Non connecté.");
 
-  const csv = csvInput.files[0];
-  if (csv) {
-    // Upload CSV brut dans le bucket 'guests'
+  // --- CSV ---
+  const csvFile = csvInput.files[0];
+  if (csvFile) {
+    // Crée un Blob pour forcer le type MIME 'text/csv'
+    const csvBlob = new Blob([await csvFile.text()], { type: 'text/csv' });
+
     const { error } = await supabase.storage
       .from('guests')
-      .upload(`${user.id}/${csv.name}`, csv, {
-        upsert: true,
-        contentType: 'text/csv' // ⚡ correction MIME Excel
-      });
+      .upload(`${user.id}/${csvFile.name}`, csvBlob, { upsert: true });
+
     if (error) return alert('Erreur upload CSV: ' + error.message);
 
-    // --- Parsing côté client uniquement pour aperçu ---
-    const text = await csv.text();
+    // Parsing côté client uniquement pour aperçu
+    const text = await csvBlob.text();
     const delimiter = detectDelimiter(text);
 
     Papa.parse(text, {
@@ -107,12 +108,12 @@ sendBtn.onclick = async () => {
       delimiter,
       complete: (results) => {
         console.log("Aperçu CSV :", results.data);
-        alert(`✅ CSV uploadé. Aperçu : ${results.data.length} lignes détectées (côté navigateur).`);
+        alert(`✅ CSV uploadé. Aperçu : ${results.data.length} lignes détectées.`);
       }
     });
   }
 
-  // Upload des images
+  // --- Images ---
   const imgs = imagesInput.files;
   for (const img of imgs) {
     const { error } = await supabase.storage.from('images').upload(`${user.id}/${img.name}`, img, { upsert: true });
