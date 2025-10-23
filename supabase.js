@@ -153,7 +153,7 @@ sendBtn.onclick = async () => {
 function detectDelimiter(text) {
   const firstLine = text.split(/\r?\n/)[0];
   const countComma = (firstLine.match(/,/g) || []).length;
-  const countSemicolon = (firstLine.match(/;/g/]) || []).length;
+ const countSemicolon = (firstLine.match(/;/g) || []).length;
   return countSemicolon > countComma ? ";" : ",";
 }
 
