@@ -3,9 +3,8 @@ import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 console.log("✅ Fichier supabase.js chargé");
 
-// --- Supabase ---
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
 const supabase = createClient(supabaseUrl, supabaseKey);
 window.supabase = supabase;
 
@@ -14,7 +13,7 @@ const email = document.getElementById('email');
 const password = document.getElementById('password');
 const signup = document.getElementById('signup');
 const login = document.getElementById('login');
-const logout = document.getElementById('logout');
+const logoutBtn = document.getElementById('logoutBtn');
 const uploadDiv = document.getElementById('upload');
 const authDiv = document.getElementById('auth');
 const sendBtn = document.getElementById('send');
@@ -27,13 +26,14 @@ const publicUrlDiv = document.getElementById('publicUrl');
 function onLogin() {
   authDiv.style.display = 'none';
   uploadDiv.style.display = 'block';
-  logout.style.display = 'inline-block';
+  logoutBtn.style.display = 'inline-block';
+  publicUrlDiv.textContent = '';
 }
 
 function onLogout() {
   authDiv.style.display = 'block';
   uploadDiv.style.display = 'none';
-  logout.style.display = 'none';
+  logoutBtn.style.display = 'none';
   publicUrlDiv.textContent = '';
 }
 
@@ -78,7 +78,8 @@ login.onclick = async () => {
   else onLogin();
 };
 
-logout.onclick = async () => {
+// --- Déconnexion ---
+logoutBtn.onclick = async () => {
   await supabase.auth.signOut();
   onLogout();
 };
@@ -97,7 +98,7 @@ sendBtn.onclick = async () => {
   // Crée un Blob CSV
   const csvBlob = new Blob([await csvFile.text()], { type: 'text/csv' });
 
-  // Upload du CSV privé
+  // Upload CSV privé
   const { error: csvError } = await supabase.storage
     .from('guests')
     .upload(`${user.id}/${csvFile.name}`, csvBlob, { upsert: true });
@@ -105,7 +106,7 @@ sendBtn.onclick = async () => {
   if (csvError) return alert('Erreur upload CSV: ' + csvError.message);
   alert("✅ Fichier CSV privé uploadé.");
 
-  // --- Optionnel : conversion JSON publique si non privé ---
+  // Upload JSON public si non privé
   if (!isPrivate) {
     const text = await csvBlob.text();
     const delimiter = detectDelimiter(text);
@@ -117,7 +118,6 @@ sendBtn.onclick = async () => {
       complete: async (results) => {
         const guestsJson = JSON.stringify(results.data, null, 2);
         const jsonBlob = new Blob([guestsJson], { type: 'application/json' });
-
         const publicJsonName = `guests_${user.id}.json`;
 
         const { error: jsonError } = await supabase.storage
@@ -138,7 +138,7 @@ sendBtn.onclick = async () => {
     });
   }
 
-  // --- Upload images ---
+  // Upload images
   const imgs = imagesInput.files;
   for (const img of imgs) {
     const { error } = await supabase.storage
