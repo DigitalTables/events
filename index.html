@@ -21,11 +21,8 @@
     <div class="container">
       <h2>Attribuez facilement la table de vos invités</h2>
       <p>Un outil simple et rapide qui apporte une touche unique à votre événement.</p> 
-      
     </div>
   </section>
-
-  <button id="logout" style="display:inline-block;">Se déconnecter</button>
 
   <!-- Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
@@ -42,9 +39,13 @@
     <h3>Uploader ton CSV et tes images</h3>
     <input type="file" id="guests" accept=".csv"><br><br>
     <input type="file" id="images" accept="image/*" multiple><br><br>
+
+    <label style="font-size:16px;">
+      <input type="checkbox" id="privateUpload"> Fichier privé (ne pas créer de JSON public)
+    </label><br><br>
+
     <button id="send">Envoyer</button>
   </div>
-
 
   <footer>
     <div class="container">
