@@ -49,4 +49,27 @@
     </div>
 
     <!-- CSV privé ou public -->
-    <div style="mar
+    <div style="margin-bottom:1rem;">
+      <label>
+        <input type="checkbox" id="privateCsv"> CSV privé (pas de JSON public)
+      </label>
+    </div>
+
+    <h3>Uploader ton CSV et tes images</h3>
+    <input type="file" id="guests" accept=".csv"><br><br>
+    <input type="file" id="images" accept="image/*" multiple><br><br>
+    <button id="send">Envoyer</button>
+
+    <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>© 2025 DigitalTables. Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <!-- Supabase JS en module -->
+  <script type="module" src="supabase.js"></script>
+</body>
+</html>
