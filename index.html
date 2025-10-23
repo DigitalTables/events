@@ -28,25 +28,26 @@
   <div id="auth" style="text-align:center; margin-top:2rem;">
     <h3>Connexion</h3>
     <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Mot de passe">
+    <input type="password" id="password" placeholder="Mot de passe"><br><br>
     <button id="signup">Créer un compte</button>
     <button id="login">Se connecter</button>
-    <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
 
   <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
     <h3>Uploader ton CSV et tes images</h3>
     <input type="file" id="guests" accept=".csv"><br><br>
-    <input type="file" id="images" accept="image/*" multiple><br><br>
-
-    <label style="font-size:16px;">
-      <input type="checkbox" id="privateUpload"> Fichier privé (ne pas créer de JSON public)
+    <label>
+      <input type="checkbox" id="privateUpload"> CSV privé (pas de JSON public)
     </label><br><br>
-
+    <input type="file" id="images" accept="image/*" multiple><br><br>
     <button id="send">Envoyer</button>
+    <div id="publicUrl" style="margin-top:1em; word-wrap:break-word;"></div>
+  </div>
 
-    <div id="publicUrl" style="margin-top:1em; font-family:monospace; color:#333;"></div>
+  <!-- Bouton Déconnexion -->
+  <div style="text-align:center; margin-top:1rem;">
+    <button id="logoutBtn" style="display:none;">Se déconnecter</button>
   </div>
 
   <footer>
