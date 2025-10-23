@@ -20,6 +20,8 @@ const authDiv = document.getElementById('auth');
 const sendBtn = document.getElementById('send');
 const csvInput = document.getElementById('guests');
 const imagesInput = document.getElementById('images');
+const privateCheckbox = document.getElementById('privateUpload');
+const publicUrlDiv = document.getElementById('publicUrl');
 
 // --- Gestion de session ---
 function onLogin() {
@@ -32,6 +34,7 @@ function onLogout() {
   authDiv.style.display = 'block';
   uploadDiv.style.display = 'none';
   logout.style.display = 'none';
+  publicUrlDiv.textContent = '';
 }
 
 // Vérifie token de confirmation dans l'URL
@@ -86,19 +89,25 @@ sendBtn.onclick = async () => {
   const user = userData?.user;
   if (!user) return alert("❌ Non connecté.");
 
-  // --- CSV ---
   const csvFile = csvInput.files[0];
-  if (csvFile) {
-    // Crée un Blob pour forcer le type MIME 'text/csv'
-    const csvBlob = new Blob([await csvFile.text()], { type: 'text/csv' });
+  if (!csvFile) return alert("❌ Aucun fichier CSV sélectionné.");
 
-    const { error } = await supabase.storage
-      .from('guests')
-      .upload(`${user.id}/${csvFile.name}`, csvBlob, { upsert: true });
+  const isPrivate = privateCheckbox.checked;
 
-    if (error) return alert('Erreur upload CSV: ' + error.message);
+  // Crée un Blob CSV
+  const csvBlob = new Blob([await csvFile.text()], { type: 'text/csv' });
 
-    // Parsing côté client uniquement pour aperçu
+  // Upload du CSV privé
+  const { error: csvError } = await supabase.storage
+    .from('guests')
+    .upload(`${user.id}/${csvFile.name}`, csvBlob, { upsert: true });
+
+  if (csvError) return alert('Erreur upload CSV: ' + csvError.message);
+
+  alert("✅ Fichier CSV privé uploadé.");
+
+  // --- Optionnel : conversion JSON publique si non privé ---
+  if (!isPrivate) {
     const text = await csvBlob.text();
     const delimiter = detectDelimiter(text);
 
@@ -106,14 +115,31 @@ sendBtn.onclick = async () => {
       header: true,
       skipEmptyLines: true,
       delimiter,
-      complete: (results) => {
-        console.log("Aperçu CSV :", results.data);
-        alert(`✅ CSV uploadé. Aperçu : ${results.data.length} lignes détectées.`);
+      complete: async (results) => {
+        const guestsJson = JSON.stringify(results.data, null, 2);
+        const jsonBlob = new Blob([guestsJson], { type: 'application/json' });
+
+        const publicJsonName = `guests_${user.id}.json`;
+
+        const { error: jsonError } = await supabase.storage
+          .from('public-guests')
+          .upload(publicJsonName, jsonBlob, { upsert: true });
+
+        if (jsonError) {
+          alert('⚠️ Erreur upload JSON public: ' + jsonError.message);
+        } else {
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
+          publicUrlDiv.innerHTML = `
+            ✅ <b>JSON public créé avec succès !</b><br>
+            URL : <a href="${publicUrl}" target="_blank">${publicUrl}</a>
+          `;
+          console.log("✅ JSON public disponible à :", publicUrl);
+        }
       }
     });
   }
 
-  // --- Images ---
+  // --- Upload images ---
   const imgs = imagesInput.files;
   for (const img of imgs) {
     const { error } = await supabase.storage.from('images').upload(`${user.id}/${img.name}`, img, { upsert: true });
@@ -127,6 +153,7 @@ sendBtn.onclick = async () => {
 function detectDelimiter(text) {
   const firstLine = text.split(/\r?\n/)[0];
   const countComma = (firstLine.match(/,/g) || []).length;
-  const countSemicolon = (firstLine.match(/;/g) || []).length;
+  const countSemicolon = (firstLine.match(/;/g/]) || []).length;
   return countSemicolon > countComma ? ";" : ",";
 }
+
