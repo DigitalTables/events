@@ -24,39 +24,29 @@
     </div>
   </section>
 
+  <button id="logout" style="display:inline-block;">Se déconnecter</button>
+
   <!-- Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
-    <h3>Connexion</h3>
+    <h3>Connexion / Inscription</h3>
     <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Mot de passe"><br><br>
+    <input type="password" id="password" placeholder="Mot de passe">
     <button id="signup">Créer un compte</button>
     <button id="login">Se connecter</button>
+    <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
 
   <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
-    <h3>Uploader ton CSV et tes images</h3>
-    <input type="file" id="guests" accept=".csv"><br><br>
-    <label>
-      <input type="checkbox" id="privateUpload"> CSV privé (pas de JSON public)
-    </label><br><br>
-    <input type="file" id="images" accept="image/*" multiple><br><br>
-    <button id="send">Envoyer</button>
-    <div id="publicUrl" style="margin-top:1em; word-wrap:break-word;"></div>
-  </div>
 
-  <!-- Bouton Déconnexion -->
-  <div style="text-align:center; margin-top:1rem;">
-    <button id="logoutBtn" style="display:none;">Se déconnecter</button>
-  </div>
-
-  <footer>
-    <div class="container">
-      <p>© 2025 DigitalTables. Tous droits réservés.</p>
+    <!-- Pseudo utilisateur -->
+    <div style="margin-bottom:1rem;">
+      <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
+        Choisissez un identifiant public (sera dans l’URL) :
+      </label>
+      <input type="text" id="username" placeholder="ex: willis2025">
+      <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem; color:red;"></div>
     </div>
-  </footer>
 
-  <!-- Supabase JS en module -->
-  <script type="module" src="supabase.js"></script>
-</body>
-</html>
+    <!-- CSV privé ou public -->
+    <div style="mar
