@@ -3,109 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <title>Placement des invités</title>
-   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
- <style>
-body {
-  background: radial-gradient(ellipse at center, #fffdfb 0%, #f5eee5 100%);
-  font-family: 'Quicksand', sans-serif;
-  text-align: center;
-  padding: 2em;
-  color: #3e2f27;
-}
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: radial-gradient(ellipse at center, #fffdfb 0%, #f5eee5 100%);
+      font-family: 'Quicksand', sans-serif;
+      text-align: center;
+      padding: 2em;
+      color: #3e2f27;
+    }
 
-  h1, h2 {
-    font-family: 'Playfair Display', serif;
-    color: #2e1f17;
-  }
+    h1, h2 {
+      font-family: 'Playfair Display', serif;
+      color: #2e1f17;
+    }
 
-  input {
-    width: 300px;
-    padding: 10px;
-    font-size: 16px;
-    font-family: 'Quicksand', sans-serif;
-  }
+    input {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      font-family: 'Quicksand', sans-serif;
+    }
 
-  img {
-    margin-top: 20px;
-    width: 150px;
-    height: 150px;
-  }
+    img {
+      margin-top: 20px;
+      width: 150px;
+      height: 150px;
+    }
 
-  .logo-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 30px;
-  }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 30px;
+    }
 
-  .logo-image {
-    max-width: 250px;
-    height: auto;
-    opacity: 0.95;
-    transition: transform 0.3s ease;
-  }
+    .logo-image {
+      max-width: 250px;
+      height: auto;
+      opacity: 0.95;
+      transition: transform 0.3s ease;
+    }
 
-  .logo-image:hover {
-    transform: scale(1.05);
-  }
+    .logo-image:hover {
+      transform: scale(1.05);
+    }
 
-  .result {
-    margin-top: 20px;
-    font-size: 18px;
-    font-family: 'Quicksand', sans-serif;
-    padding: 1em;
-    max-width: 90%;
-    margin-left: auto;
-    margin-right: auto;
-    background-color: rgba(255, 255, 255, 0.6);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    word-wrap: break-word;
-    color: #3e2f27;
-  }
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-family: 'Quicksand', sans-serif;
+      padding: 1em;
+      max-width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+      background-color: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      word-wrap: break-word;
+      color: #3e2f27;
+    }
 
-  .result * {
-    color: inherit;
-  }
+    .result * {
+      color: inherit;
+    }
 
-  .result img {
-    max-width: 100%;
-    height: auto;
-    margin-top: 1em;
-    border-radius: 6px;
-  }
-   .match-btn {
-  background: linear-gradient(135deg, #f5eee5 0%, #e7d8c7 100%);
-  color: #3e2f27;
-  border: 1px solid #d0bfae;
-  border-radius: 25px;
-  padding: 10px 18px;
-  margin: 6px;
-  font-size: 16px;
-  font-family: 'Quicksand', sans-serif;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: all 0.25s ease;
-}
+    .result img {
+      max-width: 100%;
+      height: auto;
+      margin-top: 1em;
+      border-radius: 6px;
+    }
 
-.match-btn:hover {
-  background: linear-gradient(135deg, #e7d8c7 0%, #f5eee5 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
+    .match-btn {
+      background: linear-gradient(135deg, #f5eee5 0%, #e7d8c7 100%);
+      color: #3e2f27;
+      border: 1px solid #d0bfae;
+      border-radius: 25px;
+      padding: 10px 18px;
+      margin: 6px;
+      font-size: 16px;
+      font-family: 'Quicksand', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: all 0.25s ease;
+    }
 
-.match-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
+    .match-btn:hover {
+      background: linear-gradient(135deg, #e7d8c7 0%, #f5eee5 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
 
-</style>
-
+    .match-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
   <div class="logo-container">
-  <img src="images/LogoWlNoBck.png" alt="Logo mariage Willis et Lionel" class="logo-image">
-</div>
+    <img src="images/LogoWlNoBck.png" alt="Logo mariage Willis et Lionel" class="logo-image">
+  </div>
   <h1>Bienvenue/Benvenuta, Benvenuto/Welcome au mariage de</h1>
   <h2>Willis & Lionel</h2>
   <h3>Pour connaître ta table, per conoscere il tuo tavolo</h3>
@@ -115,127 +114,117 @@ body {
   <div class="result" id="result"></div>
 
   <script>
+    const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
+    let guests = [];
 
-const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
-let guests = [];
+    const inputEl = document.getElementById('nameInput');
+    const resultEl = document.getElementById('result');
 
-const inputEl = document.getElementById('nameInput');
-const resultEl = document.getElementById('result');
+    // Fonction de normalisation du texte (accents et espaces)
+    function normalize(str) {
+      return String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // retire accents
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
 
-function normalize(str){
-  return String(str || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // retire accents
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+    // Récupération de l'ID utilisateur depuis l'URL
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('user');
+    if (!userId) {
+      resultEl.textContent = "❌ Aucun utilisateur spécifié dans l'URL.";
+    }
 
-/* Charge le JSON + debug */
-fetch('guests.json')
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    return response.json();
-  })
-  .then(data => {
-    guests = data;
-    fillDatalist();
-    console.log('guests loaded:', guests.length, guests.slice(0,6));
-  })
-  .catch(err => {
-    console.error('Erreur fetch invites.json →', err);
-    resultEl.textContent = 'Erreur chargement invites.json : ' + err.message;
-  });
+    // URL dynamique pour le fichier JSON de l'utilisateur
+    const baseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public";
+    const jsonUrl = `${baseUrl}/public-guests/guests_${userId}.json`;
 
-function fillDatalist() {
-  const dl = document.getElementById('names');
-  dl.innerHTML = '';
-  guests.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g.name;
-    dl.appendChild(opt);
-  });
-}
+    // Chargement du fichier JSON spécifique à l'utilisateur
+    fetch(jsonUrl)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        guests = data;
+        fillDatalist();
+      })
+      .catch(err => {
+        resultEl.textContent = "Erreur chargement JSON : " + err.message;
+      });
 
-/* Mapping images (garder / adapter si besoin) */
-const tableImages = {
-  "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
-  "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
-  "Isle of Skye - Scotland": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Scotland.jpeg",
-  "Piton des Neiges - La Réunion": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Reunion.jpeg",
-  "Komodo Dragons - Indonesia": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Komodo.jpeg",
-  "Backside Mont Fort - Verbier": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Montfort.jpeg",
-  "Heliski Château des Dames - Cervinia": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Heliski.jpeg",
-  "Halong Bay Cruise - Vietnam": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Halongbay.jpeg",
-  "Hammerhead Sharks - Galapagos": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Galapagos.jpeg",
-  "Mitad del mundo - Ecuador": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Mitaddelmundo.jpeg",
-  "3 of Us - Mauritius": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Maurice.jpeg",
-  "Colle dell'Arietta - Valle Soana": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Arietta.jpeg",
-  "Niseko Powder - Japan": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Niseko.jpeg",
-  "La Demande - Santorini": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Santorini.jpeg"
-};
+    // Remplir le datalist avec les noms des invités
+    function fillDatalist() {
+      const dl = document.getElementById('names');
+      dl.innerHTML = '';
+      guests.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.name;
+        dl.appendChild(opt);
+      });
+    }
 
-/* Affichage d'une fiche invité */
-function showGuest(guest) {
-  const message = guest.message || defaultMessage;
-  let html = `<span style="color: inherit;">
-                ${message}<br><br>
-                <strong style="color: inherit;">Ta table est :</strong> ${guest.table}
-              </span>`;
-  const img = tableImages[guest.table];
-  if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
-  resultEl.innerHTML = html;
-}
+    // Mapping des images par table (à personnaliser selon tes images)
+    const tableImages = {
+      "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
+      "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
+      // Ajoute ici toutes tes tables et images correspondantes
+    };
 
-/* Aucun résultat */
-function showNoMatch(input) {
-  resultEl.textContent = `Aucun invité reconnu pour "${input}". Essayez prénom, nom, ou vérifiez l'orthographe.`;
-}
+    // Afficher les détails d'un invité
+    function showGuest(guest) {
+      const message = guest.message || defaultMessage;
+      let html = `<span style="color: inherit;">
+                    ${message}<br><br>
+                    <strong style="color: inherit;">Ta table est :</strong> ${guest.table}
+                  </span>`;
+      const img = tableImages[guest.table];
+      if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
+      resultEl.innerHTML = html;
+    }
 
-/* Plusieurs correspondances (boutons cliquables) */
-function showMultiple(matches) {
-  const items = matches.slice(0, 8).map(m =>
-    `<button type="button" class="match-btn" data-name="${m.name}" style="margin:5px;padding:6px 10px;cursor:pointer;">${m.name}</button>`
-  ).join('');
-  resultEl.innerHTML = `<div>Plusieurs correspondances :<br>${items}</div>`;
-}
+    // Aucun résultat trouvé
+    function showNoMatch(input) {
+      resultEl.textContent = `Aucun invité reconnu pour "${input}". Essayez prénom, nom, ou vérifiez l'orthographe.`;
+    }
 
-/* Recherche progressive : exact -> startsWith -> includes */
-function searchAndDisplay(input) {
-  if (!input || input.trim() === '') {
-    resultEl.textContent = '';
-    return;
-  }
-  const n = normalize(input);
-  // exact
-  let matches = guests.filter(g => normalize(g.name) === n);
-  if (matches.length === 1) { showGuest(matches[0]); return; }
-  // startsWith
-  matches = guests.filter(g => normalize(g.name).startsWith(n));
-//  if (matches.length === 1) { showGuest(matches[0]); return; }
-  if (matches.length >= 1) { showMultiple(matches); return; }
-  // includes
-  matches = guests.filter(g => normalize(g.name).includes(n));
-//  if (matches.length === 1) { showGuest(matches[0]); return; }
-  if (matches.length >= 1) { showMultiple(matches); return; }
-  showNoMatch(input);
-}
+    // Afficher plusieurs résultats (boutons)
+    function showMultiple(matches) {
+      const items = matches.slice(0, 8).map(m =>
+        `<button type="button" class="match-btn" data-name="${m.name}" style="margin:5px;padding:6px 10px;cursor:pointer;">${m.name}</button>`
+      ).join('');
+      resultEl.innerHTML = `<div>Plusieurs correspondances :<br>${items}</div>`;
+    }
 
-/* Evenements : recherche live pendant la saisie + change */
-inputEl.addEventListener('input', e => searchAndDisplay(e.target.value));
-inputEl.addEventListener('change', e => searchAndDisplay(e.target.value));
+    // Recherche d'un invité
+    function searchAndDisplay(input) {
+      if (!input || input.trim() === '') {
+        resultEl.textContent = '';
+        return;
+      }
+      const n = normalize(input);
+      let matches = guests.filter(g => normalize(g.name) === n);
+      if (matches.length === 1) { showGuest(matches[0]); return; }
+      matches = guests.filter(g => normalize(g.name).startsWith(n));
+      if (matches.length >= 1) { showMultiple(matches); return; }
+      matches = guests.filter(g => normalize(g.name).includes(n));
+      if (matches.length >= 1) { showMultiple(matches); return; }
+      showNoMatch(input);
+    }
 
-/* Clique sur une suggestion */
-resultEl.addEventListener('click', e => {
-  const name = e.target.dataset && e.target.dataset.name;
-  if (name) {
-    inputEl.value = name;
-    //searchAndDisplay(name);
-    const guest = guests.find(g => normalize(g.name) === normalize(name));
-    if (guest) showGuest(guest);
-  }
-});
-</script>
+    inputEl.addEventListener('input', e => searchAndDisplay(e.target.value));
+    inputEl.addEventListener('change', e => searchAndDisplay(e.target.value));
 
+    resultEl.addEventListener('click', e => {
+      const name = e.target.dataset && e.target.dataset.name;
+      if (name) {
+        inputEl.value = name;
+        const guest = guests.find(g => normalize(g.name) === normalize(name));
+        if (guest) showGuest(guest);
+      }
+    });
+  </script>
 </body>
 </html>
