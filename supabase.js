@@ -103,7 +103,6 @@ sendBtn.onclick = async () => {
     .upload(`${user.id}/${csvFile.name}`, csvBlob, { upsert: true });
 
   if (csvError) return alert('Erreur upload CSV: ' + csvError.message);
-
   alert("✅ Fichier CSV privé uploadé.");
 
   // --- Optionnel : conversion JSON publique si non privé ---
@@ -142,7 +141,9 @@ sendBtn.onclick = async () => {
   // --- Upload images ---
   const imgs = imagesInput.files;
   for (const img of imgs) {
-    const { error } = await supabase.storage.from('images').upload(`${user.id}/${img.name}`, img, { upsert: true });
+    const { error } = await supabase.storage
+      .from('images')
+      .upload(`${user.id}/${img.name}`, img, { upsert: true });
     if (error) return alert('Erreur upload image: ' + error.message);
   }
 
@@ -153,7 +154,6 @@ sendBtn.onclick = async () => {
 function detectDelimiter(text) {
   const firstLine = text.split(/\r?\n/)[0];
   const countComma = (firstLine.match(/,/g) || []).length;
- const countSemicolon = (firstLine.match(/;/g) || []).length;
+  const countSemicolon = (firstLine.match(/;/g) || []).length;
   return countSemicolon > countComma ? ";" : ",";
 }
-
