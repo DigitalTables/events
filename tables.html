@@ -64,9 +64,7 @@
       color: #3e2f27;
     }
 
-    .result * {
-      color: inherit;
-    }
+    .result * { color: inherit; }
 
     .result img {
       max-width: 100%;
@@ -113,49 +111,79 @@
   <datalist id="names"></datalist>
   <div class="result" id="result"></div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
+
+    const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
     let guests = [];
 
     const inputEl = document.getElementById('nameInput');
     const resultEl = document.getElementById('result');
 
-    // Fonction de normalisation du texte (accents et espaces)
     function normalize(str) {
       return String(str || '')
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // retire accents
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
     }
 
-    // Récupération de l'ID utilisateur depuis l'URL
+    // 🔹 Récupération du paramètre ?event=xxx
     const params = new URLSearchParams(window.location.search);
-    const userId = params.get('user');
-    if (!userId) {
-      resultEl.textContent = "❌ Aucun utilisateur spécifié dans l'URL.";
+    const eventName = params.get('event');
+    if (!eventName) {
+      resultEl.textContent = "❌ Aucun événement spécifié dans l'URL.";
+    } else {
+      loadEventData(eventName);
     }
 
-    // URL dynamique pour le fichier JSON de l'utilisateur
-    const baseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public";
-    const jsonUrl = `${baseUrl}/public-guests/guests_${userId}.json`;
+    // 🔹 Fonction principale de chargement de l'événement
+    async function loadEventData(eventName) {
+      try {
+        // Cherche l'événement dans la table Supabase
+        const { data: event, error } = await supabase
+          .from("events")
+          .select("is_private, password, json_url")
+          .eq("username", eventName)
+          .single();
 
-    // Chargement du fichier JSON spécifique à l'utilisateur
-    fetch(jsonUrl)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        guests = data;
+        if (error || !event) throw new Error("Événement introuvable.");
+
+        let jsonUrl = event.json_url;
+
+        // Si privé → demande mot de passe puis récupère URL signée
+        if (event.is_private) {
+          const enteredPass = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
+          if (!enteredPass || enteredPass !== event.password) {
+            resultEl.textContent = "❌ Mot de passe incorrect ou manquant.";
+            return;
+          }
+
+          // Crée un lien signé
+          const { data: signed } = await supabase
+            .storage
+            .from("private-guests")
+            .createSignedUrl(`guests_${eventName}.json`, 60 * 60);
+          jsonUrl = signed.signedUrl;
+        }
+
+        // Charge les données du JSON
+        const response = await fetch(jsonUrl);
+        if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+        guests = await response.json();
         fillDatalist();
-      })
-      .catch(err => {
-        resultEl.textContent = "Erreur chargement JSON : " + err.message;
-      });
 
-    // Remplir le datalist avec les noms des invités
+      } catch (err) {
+        console.error(err);
+        resultEl.textContent = "Erreur chargement des invités : " + err.message;
+      }
+    }
+
     function fillDatalist() {
       const dl = document.getElementById('names');
       dl.innerHTML = '';
@@ -166,39 +194,33 @@
       });
     }
 
-    // Mapping des images par table (à personnaliser selon tes images)
     const tableImages = {
       "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
       "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
-      // Ajoute ici toutes tes tables et images correspondantes
     };
 
-    // Afficher les détails d'un invité
     function showGuest(guest) {
       const message = guest.message || defaultMessage;
       let html = `<span style="color: inherit;">
                     ${message}<br><br>
-                    <strong style="color: inherit;">Ta table est :</strong> ${guest.table}
+                    <strong>Ta table est :</strong> ${guest.table}
                   </span>`;
       const img = tableImages[guest.table];
       if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
       resultEl.innerHTML = html;
     }
 
-    // Aucun résultat trouvé
     function showNoMatch(input) {
       resultEl.textContent = `Aucun invité reconnu pour "${input}". Essayez prénom, nom, ou vérifiez l'orthographe.`;
     }
 
-    // Afficher plusieurs résultats (boutons)
     function showMultiple(matches) {
       const items = matches.slice(0, 8).map(m =>
-        `<button type="button" class="match-btn" data-name="${m.name}" style="margin:5px;padding:6px 10px;cursor:pointer;">${m.name}</button>`
+        `<button type="button" class="match-btn" data-name="${m.name}">${m.name}</button>`
       ).join('');
       resultEl.innerHTML = `<div>Plusieurs correspondances :<br>${items}</div>`;
     }
 
-    // Recherche d'un invité
     function searchAndDisplay(input) {
       if (!input || input.trim() === '') {
         resultEl.textContent = '';
