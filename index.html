@@ -24,7 +24,7 @@
     </div>
   </section>
 
-  <!-- Bouton logout unique -->
+  <!-- Déconnexion -->
   <div style="text-align:center; margin-top:1rem;">
     <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
@@ -32,8 +32,8 @@
   <!-- Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
     <h3>Connexion / Inscription</h3>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Mot de passe">
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Mot de passe" />
     <button id="signup">Créer un compte</button>
     <button id="login">Se connecter</button>
   </div>
@@ -41,25 +41,33 @@
   <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
 
-    <!-- Pseudo utilisateur -->
+    <!-- Identifiant public -->
     <div style="margin-bottom:1rem;">
       <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
         Choisissez un identifiant public (sera dans l’URL) :
       </label>
-      <input type="text" id="username" placeholder="ex: willis2025">
-      <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem; color:red;"></div>
+      <input type="text" id="username" placeholder="ex: mariage2025" />
+      <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
     </div>
 
-    <!-- CSV privé ou public -->
+    <!-- Checkbox CSV privé -->
     <div style="margin-bottom:1rem;">
       <label>
-        <input type="checkbox" id="privateCsv"> CSV privé (pas de JSON public)
+        <input type="checkbox" id="privateCsv" /> CSV privé (accès via mot de passe)
       </label>
     </div>
 
+    <!-- Champ mot de passe (affiché uniquement si privé) -->
+    <div id="passwordDiv" style="display:none; margin-bottom:1rem;">
+      <label for="eventPassword" style="display:block; font-weight:700; margin-bottom:0.25rem;">
+        Mot de passe de l’événement :
+      </label>
+      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
+    </div>
+
     <h3>Uploader ton CSV et tes images</h3>
-    <input type="file" id="guests" accept=".csv"><br><br>
-    <input type="file" id="images" accept="image/*" multiple><br><br>
+    <input type="file" id="guests" accept=".csv" /><br><br>
+    <input type="file" id="images" accept="image/*" multiple /><br><br>
     <button id="send">Envoyer</button>
 
     <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
@@ -71,7 +79,7 @@
     </div>
   </footer>
 
-  <!-- Supabase JS en module -->
+  <!-- Script Supabase -->
   <script type="module" src="supabase.js"></script>
 </body>
 </html>
