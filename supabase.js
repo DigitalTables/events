@@ -148,7 +148,7 @@ sendBtn.onclick = async () => {
   if (isPrivate) {
     // 🔒 Upload dans bucket privé
     const { error: uploadError } = await supabase.storage
-      .from("private-guests")
+      .from("guests")
       .upload(publicJsonName, jsonBlob, { upsert: true });
     if (uploadError)
       return alert("Erreur upload JSON privé: " + uploadError.message);
