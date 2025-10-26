@@ -150,15 +150,16 @@
       };
 
       logoutBtn.onclick = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          console.error("Erreur déconnexion :", error.message);
-          alert("Erreur déconnexion : " + error.message);
-          return;
-        }
-        await refreshAuthState();
-        alert("✅ Déconnecté avec succès !");
-      };
+  try {
+    await supabase.auth.signOut();
+    // Pour GitHub Pages, mieux vaut recharger la page
+    window.location.href = window.location.pathname;
+  } catch (err) {
+    console.error("Erreur déconnexion:", err);
+    alert("Erreur déconnexion : " + err.message);
+  }
+};
+
 
       supabase.auth.onAuthStateChange(() => refreshAuthState());
       refreshAuthState();
