@@ -2,59 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connexion Supabase</title>
-  <style>
-    #console {
-      background-color: #222;
-      color: white;
-      font-family: monospace;
-      padding: 10px;
-      margin-top: 20px;
-      height: 200px;
-      overflow-y: scroll;
-      font-size: 14px;
-    }
-  </style>
+  <title>Authentification...</title>
 </head>
 <body>
+<p>Redirection...</p>
+<script type="module">
+  import { supabase } from './supabase.js';
 
-  <div id="auth">
-    <h2>Connexion / Création de compte</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Mot de passe">
-    <button id="signup">Créer un compte</button>
-    <button id="login">Se connecter</button>
-  </div>
-
-  <div id="upload">
-    <h2>Upload fichiers</h2>
-    <input type="file" id="csvFile">
-    <input type="file" id="images" multiple>
-    <button id="send">Uploader</button>
-  </div>
-
-  <button id="logout">Déconnexion</button>
-
-  <!-- Ajoute un espace pour la console -->
-  <div id="console"></div>
-
-  <!-- Supabase UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <script>
-    // Fonction pour loguer les erreurs dans la div "console"
-    function logToConsole(message) {
-      const consoleDiv = document.getElementById('console');
-      const logMessage = document.createElement('p');
-      logMessage.textContent = message;
-      consoleDiv.appendChild(logMessage);
+  (async () => {
+    try {
+      // Récupère le hash #access_token=... et stocke la session
+      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+      if (error) console.warn("Erreur getSessionFromUrl:", error.message);
+    } catch(e) {
+      console.error(e);
     }
-
-    console.log = logToConsole;  // Rediriger `console.log` vers la div
-
-    console.log('Page chargée...');
-  </script>
-
-  <script src="supabase.js"></script>
+    // Redirection vers index.html
+    window.location.href = "index.html";
+  })();
+</script>
 </body>
 </html>
