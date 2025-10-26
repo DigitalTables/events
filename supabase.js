@@ -1,181 +1,141 @@
+// --- supabase.js ---
+// Script unique pour gérer la connexion Supabase, l'upload des CSV,
+// la conversion en JSON, la sauvegarde dans la table "events"
+// et la génération automatique du JSON public.
+// À inclure avec : <script type="module" src="supabase.js"></script>
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-console.log("✅ supabase.js chargé");
+// --- Configuration Supabase ---
+const SUPABASE_URL = "https://xrffjwulhrydrhlvuhlj.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk3MjA5MDYsImV4cCI6MjA0NTI5NjkwNn0.qbBA3ylKo6ax7uQ91fNO3O1wUHX8je-8UL4OtC5n6B4";
 
-// <-- TA PROPRE INSTANCE SUPABASE (clé ANON publique incluse) -->
-const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
-const supabase = createClient(supabaseUrl, supabaseKey);
-window.supabase = supabase;
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// DOM
-document.addEventListener("DOMContentLoaded", () => {
-  const email = document.getElementById("email");
-  const password = document.getElementById("password");
-  const signup = document.getElementById("signup");
-  const login = document.getElementById("login");
-  const logoutBtn = document.getElementById("logout");
-  const uploadDiv = document.getElementById("upload");
-  const authDiv = document.getElementById("auth");
-  const sendBtn = document.getElementById("send");
-  const csvInput = document.getElementById("guests");
-  const imagesInput = document.getElementById("images");
-  const usernameInput = document.getElementById("username");
-  const usernameStatus = document.getElementById("usernameStatus");
-  const privateCsvCheckbox = document.getElementById("privateCsv");
-  const publicUrlDiv = document.getElementById("publicUrl");
-  const passwordDiv = document.getElementById("passwordDiv");
-  const eventPasswordInput = document.getElementById("eventPassword");
+// ---------------------------------------------------------------
+// 🔹 Fonction : Upload du CSV (public ou privé)
+// ---------------------------------------------------------------
+export async function uploadCsv(eventSlug, file, isPrivate, password = null) {
+  try {
+    if (!file) throw new Error("Aucun fichier sélectionné.");
 
-  // toggle password field for private events
-  privateCsvCheckbox.addEventListener("change", () => {
-    passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
-  });
+    const csvText = await file.text();
+    const parsed = Papa.parse(csvText, { header: true });
+    const guests = parsed.data.filter((r) => r.name && r.table);
 
-  // session handling
-  function onLogin() {
-    authDiv.style.display = "none";
-    uploadDiv.style.display = "block";
-    logoutBtn.style.display = "inline-block";
-  }
-  function onLogout() {
-    authDiv.style.display = "block";
-    uploadDiv.style.display = "none";
-    logoutBtn.style.display = "none";
-    publicUrlDiv.textContent = "";
-  }
+    if (guests.length === 0)
+      throw new Error("Le fichier CSV est vide ou mal formaté.");
 
-  logoutBtn.onclick = async () => {
-    await supabase.auth.signOut();
-    onLogout();
-  };
+    // 1️⃣ Upload du CSV original dans le bucket "guests"
+    const csvPath = `${eventSlug}.csv`;
+    const { error: uploadError } = await supabase.storage
+      .from("guests")
+      .upload(csvPath, file, { upsert: true });
 
-  supabase.auth.getSession().then(({ data }) => {
-    if (data.session) onLogin();
-    else onLogout();
-  });
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (session) onLogin();
-    else onLogout();
-  });
+    if (uploadError) throw uploadError;
 
-  signup.onclick = async () => {
-    const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
-    if (error) alert("Erreur : " + error.message);
-    else alert("✅ Compte créé, vérifie ton email.");
-  };
+    // 2️⃣ Création ou mise à jour de l'événement dans la table "events"
+    const { data: eventData, error: insertError } = await supabase
+      .from("events")
+      .upsert(
+        [
+          {
+            slug: eventSlug,
+            is_private: isPrivate,
+            password: isPrivate ? password : null,
+            csv_path: csvPath,
+          },
+        ],
+        { onConflict: "slug" }
+      )
+      .select()
+      .single();
 
-  login.onclick = async () => {
-    const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
-    if (error) alert("Erreur : " + error.message);
-    else onLogin();
-  };
+    if (insertError) throw insertError;
 
-  // helper: determine CSV delimiter
-  function detectDelimiter(text) {
-    const firstLine = text.split(/\r?\n/)[0] || "";
-    const cComma = (firstLine.match(/,/g) || []).length;
-    const cSemi = (firstLine.match(/;/g) || []).length;
-    return cSemi > cComma ? ";" : ",";
-  }
-
-  // check if public JSON exists (to prevent duplicates)
-  async function checkPublicJsonExists(username) {
-    const publicJsonName = `guests_${username}.json`;
-    // list in public-guests
-    const { data, error } = await supabase.storage.from("public-guests").list("", { search: publicJsonName });
-    if (error) {
-      console.warn("checkPublicJsonExists error:", error.message);
-      return false;
-    }
-    return data.some((f) => f.name === publicJsonName);
-  }
-
-  usernameInput.addEventListener("blur", async () => {
-    const username = usernameInput.value.trim();
-    if (!username) { usernameStatus.textContent = ""; return; }
-    const exists = await checkPublicJsonExists(username);
-    usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé pour un JSON public" : "✅ Disponible (pour JSON public)";
-    usernameStatus.style.color = exists ? "red" : "green";
-  });
-
-  // upload handler
-  sendBtn.onclick = async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (!user) return alert("❌ Tu dois être connecté pour uploader.");
-
-    const username = usernameInput.value.trim();
-    if (!username) return alert("❌ Choisis un identifiant public.");
-
-    const isPrivate = privateCsvCheckbox.checked;
-    const eventPassword = eventPasswordInput.value.trim();
-    if (isPrivate && !eventPassword) return alert("❌ Pour un événement privé, définis un mot de passe.");
-
-    const csvFile = csvInput.files[0];
-    if (!csvFile) return alert("❌ Choisis un fichier CSV.");
-
-    // read CSV text
-    const text = await csvFile.text();
-    const delimiter = detectDelimiter(text);
-    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter });
-    const rows = parsed.data;
-
-    // always upload original CSV into 'guests' bucket (private)
-    const csvPath = `guests_${username}.csv`;
-    const csvBlob = new Blob([text], { type: "text/csv" });
-    const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, csvBlob, { upsert: true });
-    if (csvUpErr) return alert("Erreur upload CSV dans guests: " + csvUpErr.message);
-
-    // if public -> create JSON and upload to public-guests
-    let signedOrPublicUrl = null;
+    // 3️⃣ Si événement public → génération du JSON public
     if (!isPrivate) {
-      const publicJsonName = `guests_${username}.json`;
-      const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-      const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
-      if (jsonUpErr) return alert("Erreur upload JSON public: " + jsonUpErr.message);
-      signedOrPublicUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
-    } else {
-      // private: keep CSV in 'guests' and create a signed URL to that CSV (long-lived)
-      const oneYear = 60 * 60 * 24 * 365;
-      const { data: signed, error: signedErr } = await supabase.storage.from("guests").createSignedUrl(csvPath, oneYear);
-      if (signedErr || !signed?.signedURL && !signed?.signedUrl) {
-        // Supabase version differences: signed.signedUrl or signed.signedURL
-        console.warn("signed err", signedErr);
-        // Try to fetch field whichever exists:
-        signedOrPublicUrl = signed?.signedUrl || signed?.signedURL || null;
-      } else {
-        signedOrPublicUrl = signed.signedUrl || signed.signedURL;
-      }
-      if (!signedOrPublicUrl) return alert("Erreur génération URL signée pour le CSV privé.");
+      const jsonBlob = new Blob([JSON.stringify(guests, null, 2)], {
+        type: "application/json",
+      });
+      const jsonPath = `guests_${eventSlug}.json`;
+
+      const { error: jsonError } = await supabase.storage
+        .from("public-guests")
+        .upload(jsonPath, jsonBlob, { upsert: true });
+
+      if (jsonError) throw jsonError;
     }
 
-    // upsert event row in 'events'
-    // our table earlier (SQL) used columns: username, event_password, signed_url (if private) or signed_url public link
-    const eventRow = {
-      username: username,
-      event_password: isPrivate ? eventPassword : null,
-      signed_url: signedOrPublicUrl,
-      created_at: new Date().toISOString()
+    return {
+      success: true,
+      message: `Événement "${eventSlug}" enregistré avec succès.`,
     };
+  } catch (err) {
+    console.error("Erreur uploadCsv:", err);
+    return { success: false, message: err.message };
+  }
+}
 
-    const { error: upsertErr } = await supabase.from("events").upsert(eventRow, { onConflict: "username" });
-    if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
+// ---------------------------------------------------------------
+// 🔹 Fonction : Récupérer le JSON des invités (public ou privé)
+// ---------------------------------------------------------------
+export async function fetchGuestsData(eventSlug, password = null) {
+  try {
+    // 1️⃣ Récupération des infos de l’événement
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("*")
+      .eq("slug", eventSlug)
+      .single();
 
-    // upload images into images/<username>/
-    const imgs = imagesInput.files;
-    for (const img of imgs) {
-      const { error: imgErr } = await supabase.storage.from("images").upload(`${username}/${img.name}`, img, { upsert: true });
-      if (imgErr) return alert("Erreur upload image: " + imgErr.message);
+    if (eventError || !event) throw new Error("Événement introuvable.");
+
+    // 2️⃣ Cas public → on charge le JSON depuis le bucket public-guests
+    if (!event.is_private) {
+      const { data, error } = await supabase.storage
+        .from("public-guests")
+        .download(`guests_${eventSlug}.json`);
+
+      if (error) throw error;
+      const text = await data.text();
+      return JSON.parse(text);
     }
 
-    // show link to share with guests
-    const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
-    publicUrlDiv.innerHTML = isPrivate
-      ? `🔒 Événement privé créé. Partage ce lien : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-      : `🌍 Événement public créé. Table publique : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br> JSON public : <br><code>${signedOrPublicUrl}</code>`;
+    // 3️⃣ Cas privé → vérification du mot de passe
+    if (event.is_private && event.password !== password)
+      throw new Error("Mot de passe incorrect pour cet événement privé.");
 
-    alert("✅ Upload terminé !");
-  };
-});
+    // 4️⃣ Téléchargement du CSV privé et conversion en JSON
+    const { data: csvData, error: csvError } = await supabase.storage
+      .from("guests")
+      .download(event.csv_path);
+
+    if (csvError) throw csvError;
+
+    const csvText = await csvData.text();
+    const parsed = Papa.parse(csvText, { header: true });
+    const guests = parsed.data.filter((r) => r.name && r.table);
+
+    return guests;
+  } catch (err) {
+    console.error("Erreur fetchGuestsData:", err);
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------
+// 🔹 Fonction : Vérifier si un événement existe déjà
+// ---------------------------------------------------------------
+export async function checkEventExists(eventSlug) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("slug")
+    .eq("slug", eventSlug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
