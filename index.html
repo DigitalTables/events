@@ -104,6 +104,7 @@
         authDiv.style.display = 'block';
         uploadDiv.style.display = 'none';
         logoutBtn.style.display = 'none';
+        publicUrl.innerHTML = "";
       }
     }
 
@@ -129,8 +130,17 @@
     };
 
     logoutBtn.onclick = async () => {
-      await supabase.auth.signOut();
-      refreshAuthState();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Erreur déconnexion :", error.message);
+        alert("Erreur déconnexion : " + error.message);
+        return;
+      }
+      // Déconnexion réussie → reset affichage
+      authDiv.style.display = 'block';
+      uploadDiv.style.display = 'none';
+      logoutBtn.style.display = 'none';
+      publicUrl.innerHTML = "";
     };
 
     supabase.auth.onAuthStateChange(() => refreshAuthState());
