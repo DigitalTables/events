@@ -187,6 +187,7 @@
 
       // === ENVOI CSV + IMAGES ===
       sendBtn.onclick = async () => {
+          console.log("Upload déclenché");
         const eventName = usernameInput.value.trim().toLowerCase();
         if (!eventName) return alert("Choisis un identifiant d'événement.");
         const file = document.getElementById('guests').files[0];
