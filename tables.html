@@ -4,211 +4,133 @@
   <meta charset="UTF-8">
   <title>Placement des invités</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background: radial-gradient(ellipse at center, #fffdfb 0%, #f5eee5 100%);
-      font-family: 'Quicksand', sans-serif;
-      text-align: center;
-      padding: 2em;
-      color: #3e2f27;
-    }
-
-    h1, h2 {
-      font-family: 'Playfair Display', serif;
-      color: #2e1f17;
-    }
-
-    input {
-      width: 300px;
-      padding: 10px;
-      font-size: 16px;
-      font-family: 'Quicksand', sans-serif;
-    }
-
-    img {
-      margin-top: 20px;
-      width: 150px;
-      height: 150px;
-    }
-
-    .logo-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .logo-image {
-      max-width: 250px;
-      height: auto;
-      opacity: 0.95;
-      transition: transform 0.3s ease;
-    }
-
-    .logo-image:hover {
-      transform: scale(1.05);
-    }
-
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-family: 'Quicksand', sans-serif;
-      padding: 1em;
-      max-width: 90%;
-      margin-left: auto;
-      margin-right: auto;
-      background-color: rgba(255, 255, 255, 0.6);
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      word-wrap: break-word;
-      color: #3e2f27;
-    }
-
-    .result * {
-      color: inherit;
-    }
-
-    .match-btn {
-      background: linear-gradient(135deg, #f5eee5 0%, #e7d8c7 100%);
-      color: #3e2f27;
-      border: 1px solid #d0bfae;
-      border-radius: 25px;
-      padding: 10px 18px;
-      margin: 6px;
-      font-size: 16px;
-      font-family: 'Quicksand', sans-serif;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: all 0.25s ease;
-    }
-
-    .match-btn:hover {
-      background: linear-gradient(135deg, #e7d8c7 0%, #f5eee5 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-
-    .match-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="logo-container">
-    <img src="images/LogoWlNoBck.png" alt="Logo mariage Willis et Lionel" class="logo-image">
+    <img src="images/LogoWlNoBck.png" alt="Logo DigitalTables" class="logo-image">
   </div>
 
-  <h1>Bienvenue/Benvenuta, Benvenuto/Welcome au mariage de</h1>
-  <h2>Willis & Lionel</h2>
+  <h1>Bienvenue / Benvenuta, Benvenuto / Welcome</h1>
+  <h2 id="event-title">Chargement...</h2>
   <h3>Pour connaître ta table, per conoscere il tuo tavolo</h3>
-  <p>Entre ton nom/Scrivi il tuo nome :</p>
+
+  <p>Entre ton nom :</p>
   <input type="text" id="nameInput" list="names" placeholder="Commencez à taper...">
   <datalist id="names"></datalist>
-
   <div class="result" id="result"></div>
 
+  <!-- Charge supabase.js (déjà configuré) -->
+  <script type="module" src="supabase.js"></script>
+
   <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
-    import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
-
-    const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const resultEl = document.getElementById("result");
-    const inputEl = document.getElementById("nameInput");
-    let guests = [];
+    // On récupère le client Supabase déjà créé dans supabase.js
+    const supabase = window.supabase;
 
     const params = new URLSearchParams(window.location.search);
-    const username = params.get("event");
+    const username = params.get('user');
+    const inputEl = document.getElementById('nameInput');
+    const resultEl = document.getElementById('result');
+    const titleEl = document.getElementById('event-title');
+    let guests = [];
+    const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
+
     if (!username) {
-      resultEl.textContent = "❌ Aucun événement spécifié dans l'URL (ex: ?event=willis2025)";
+      titleEl.textContent = "❌ Aucun événement spécifié dans l'URL.";
     } else {
       loadEvent(username);
     }
 
+    // ============================
+    // 🔹 Chargement de l'événement
+    // ============================
     async function loadEvent(username) {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .eq("username", username)
-        .single();
+      titleEl.textContent = `Événement : ${username}`;
+      resultEl.textContent = "Chargement des invités...";
 
-      if (error || !data) {
-        resultEl.textContent = "❌ Événement introuvable.";
+      const { data: event, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (error || !event) {
+        resultEl.textContent = "❌ Aucun événement trouvé.";
         return;
       }
 
-      if (data.is_private) {
+      // Si l’événement est privé, demander le mot de passe
+      if (event.event_password) {
         const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
-        if (pwd !== data.password) {
+        if (pwd !== event.event_password) {
           resultEl.textContent = "❌ Mot de passe incorrect.";
           return;
         }
-        loadPrivateCsv(data.file_path);
-      } else {
-        loadPublicJson(username);
-      }
-    }
-
-    async function loadPublicJson(username) {
-      const url = `${supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Fichier JSON non trouvé.");
-        guests = await res.json();
-        fillDatalist();
-      } catch (e) {
-        resultEl.textContent = "❌ Erreur chargement JSON : " + e.message;
-      }
-    }
-
-    async function loadPrivateCsv(path) {
-      const { data, error } = await supabase.storage
-        .from("guests")
-        .createSignedUrl(path, 60 * 60); // URL signée 1h
-
-      if (error || !data?.signedUrl) {
-        resultEl.textContent = "❌ Erreur accès CSV privé : " + (error?.message || "");
-        return;
       }
 
       try {
-        const res = await fetch(data.signedUrl);
-        const text = await res.text();
-        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-        guests = parsed.data;
+        // Cas 1️⃣ : Événement privé → fichier CSV via URL signée
+        if (event.event_password && event.signed_url) {
+          const response = await fetch(event.signed_url);
+          const csvText = await response.text();
+          guests = csvToJson(csvText);
+        }
+
+        // Cas 2️⃣ : Événement public → JSON public
+        else {
+          const publicJsonUrl = `https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public/public-guests/guests_${username}.json`;
+          const response = await fetch(publicJsonUrl);
+          if (!response.ok) throw new Error("JSON public introuvable");
+          guests = await response.json();
+        }
+
         fillDatalist();
-      } catch (e) {
-        resultEl.textContent = "❌ Erreur lecture CSV : " + e.message;
+        resultEl.textContent = "✅ Liste des invités chargée !";
+
+      } catch (err) {
+        resultEl.textContent = "❌ Erreur de chargement : " + err.message;
       }
     }
 
-    function normalize(str) {
-      return String(str || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+    // ============================
+    // 🔹 Conversion CSV → JSON
+    // ============================
+    function csvToJson(csvText) {
+      const [headerLine, ...lines] = csvText.split(/\r?\n/).filter(Boolean);
+      const headers = headerLine.split(",").map(h => h.trim());
+      return lines.map(line => {
+        const values = line.split(",").map(v => v.trim());
+        return Object.fromEntries(headers.map((h, i) => [h, values[i]]));
+      });
     }
 
+    // ============================
+    // 🔹 Interface & recherche
+    // ============================
     function fillDatalist() {
-      const dl = document.getElementById("names");
-      dl.innerHTML = "";
+      const dl = document.getElementById('names');
+      dl.innerHTML = '';
       guests.forEach(g => {
-        const opt = document.createElement("option");
+        const opt = document.createElement('option');
         opt.value = g.name;
         dl.appendChild(opt);
       });
     }
 
-    const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
     const tableImages = {
       "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
-      "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg"
+      "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
+      // tu peux en ajouter d'autres ici
     };
+
+    function normalize(str) {
+      return String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
 
     function showGuest(guest) {
       const message = guest.message || defaultMessage;
@@ -219,7 +141,7 @@
     }
 
     function showNoMatch(input) {
-      resultEl.textContent = `Aucun invité reconnu pour "${input}". Essayez prénom, nom, ou vérifiez l'orthographe.`;
+      resultEl.textContent = `Aucun invité reconnu pour "${input}".`;
     }
 
     function showMultiple(matches) {
@@ -230,8 +152,8 @@
     }
 
     function searchAndDisplay(input) {
-      if (!input || input.trim() === "") {
-        resultEl.textContent = "";
+      if (!input.trim()) {
+        resultEl.textContent = '';
         return;
       }
       const n = normalize(input);
@@ -244,10 +166,10 @@
       showNoMatch(input);
     }
 
-    inputEl.addEventListener("input", e => searchAndDisplay(e.target.value));
-    inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
+    inputEl.addEventListener('input', e => searchAndDisplay(e.target.value));
+    inputEl.addEventListener('change', e => searchAndDisplay(e.target.value));
 
-    resultEl.addEventListener("click", e => {
+    resultEl.addEventListener('click', e => {
       const name = e.target.dataset && e.target.dataset.name;
       if (name) {
         inputEl.value = name;
@@ -256,7 +178,5 @@
       }
     });
   </script>
-
-  <script src="supabase.js" type="module"></script>
 </body>
 </html>
