@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
-
+console.log("✅ supabase.js chargé");
 export const SUPABASE_URL = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
