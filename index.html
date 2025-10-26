@@ -1,68 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DigitalTables – Gestion des invités</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Tables - Tableau de bord</title>
   <link rel="stylesheet" href="style.css" />
+  <script defer src="supabase.js"></script>
 </head>
+
 <body>
-  <header>
-    <div class="container">
-      <div class="logo-title">
-        <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
-        <h1>DigitalTables</h1>
+  <div class="container">
+    <h1>🎉 Digital Tables</h1>
+
+    <div id="auth-section">
+      <h2>Connexion</h2>
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Mot de passe" />
+      <button id="login-btn">Se connecter</button>
+      <button id="signup-btn">Créer un compte</button>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+      <div class="logout-bar">
+        <p id="welcome-text"></p>
+        <button id="logout-btn">Se déconnecter</button>
       </div>
-    </div>
-  </header>
 
-  <section class="hero">
-    <div class="container">
-      <h2>Attribuez facilement les tables de vos invités</h2>
-      <p>Upload CSV, choisissez privé/public, et partagez le lien.</p>
-    </div>
-  </section>
+      <h2>Créer un nouvel événement</h2>
 
-  <div style="text-align:center; margin-top:1rem;">
-    <button id="logout" style="display:none;">Se déconnecter</button>
+      <label for="username">Nom de l'événement (sera visible dans l'URL) :</label>
+      <input type="text" id="username" placeholder="ex: mariage-julie-paul" />
+
+      <div id="username-status" style="font-size:0.9em;margin-bottom:10px;"></div>
+
+      <label for="event-password">Mot de passe (si privé) :</label>
+      <input type="password" id="event-password" placeholder="Laisser vide si public" />
+
+      <label>
+        <input type="checkbox" id="private-event" />
+        Événement privé
+      </label>
+
+      <br><br>
+
+      <label for="csv-file">Fichier invités (guests.csv) :</label>
+      <input type="file" id="csv-file" accept=".csv" />
+
+      <button id="upload-btn">📤 Uploader le CSV</button>
+
+      <div id="upload-status"></div>
+      <div id="event-link" style="margin-top:20px;"></div>
+    </div>
   </div>
-
-  <div id="auth" style="text-align:center; margin-top:2rem;">
-    <h3>Connexion / Inscription</h3>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Mot de passe" />
-    <button id="signup">Créer un compte</button>
-    <button id="login">Se connecter</button>
-  </div>
-
-  <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
-    <div style="margin-bottom:1rem;">
-      <label for="username" style="display:block; font-weight:700;">Identifiant public (sera dans l'URL)</label>
-      <input type="text" id="username" placeholder="ex: liowillis" />
-      <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
-    </div>
-
-    <div style="margin-bottom:1rem;">
-      <label><input type="checkbox" id="privateCsv" /> Événement privé (protégé par mot de passe)</label>
-      <div id="passwordDiv" style="display:none; margin-top:0.5rem;">
-        <input type="password" id="eventPassword" placeholder="Mot de passe (si privé)" />
-      </div>
-    </div>
-
-    <h3>Uploader CSV & images</h3>
-    <input type="file" id="guests" accept=".csv" /><br><br>
-    <input type="file" id="images" accept="image/*" multiple /><br><br>
-    <button id="send">Envoyer</button>
-
-    <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
-  </div>
-
-  <footer>
-    <div class="container">
-      <p>© DigitalTables</p>
-    </div>
-  </footer>
-
-  <script type="module" src="supabase.js"></script>
 </body>
 </html>
