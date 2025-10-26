@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DigitalTables – Gestion des tables invités</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DigitalTables – Gestion des invités</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
   <header>
     <div class="container">
       <div class="logo-title">
@@ -19,17 +18,15 @@
 
   <section class="hero">
     <div class="container">
-      <h2>Attribuez facilement la table de vos invités</h2>
-      <p>Un outil simple et rapide qui apporte une touche unique à votre événement.</p> 
+      <h2>Attribuez facilement les tables de vos invités</h2>
+      <p>Upload CSV, choisissez privé/public, et partagez le lien.</p>
     </div>
   </section>
 
-  <!-- Déconnexion -->
   <div style="text-align:center; margin-top:1rem;">
     <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
 
-  <!-- Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
     <h3>Connexion / Inscription</h3>
     <input type="email" id="email" placeholder="Email" />
@@ -38,34 +35,21 @@
     <button id="login">Se connecter</button>
   </div>
 
-  <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
-
-    <!-- Identifiant public -->
     <div style="margin-bottom:1rem;">
-      <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
-        Choisissez un identifiant public (visible dans l’URL) :
-      </label>
-      <input type="text" id="username" placeholder="ex: johanna-martin-2026" />
+      <label for="username" style="display:block; font-weight:700;">Identifiant public (sera dans l'URL)</label>
+      <input type="text" id="username" placeholder="ex: liowillis" />
       <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
     </div>
 
-    <!-- Checkbox CSV privé -->
     <div style="margin-bottom:1rem;">
-      <label>
-        <input type="checkbox" id="privateCsv" /> CSV privé (accès via mot de passe)
-      </label>
+      <label><input type="checkbox" id="privateCsv" /> Événement privé (protégé par mot de passe)</label>
+      <div id="passwordDiv" style="display:none; margin-top:0.5rem;">
+        <input type="password" id="eventPassword" placeholder="Mot de passe (si privé)" />
+      </div>
     </div>
 
-    <!-- Champ mot de passe (affiché uniquement si privé) -->
-    <div id="passwordDiv" style="display:none; margin-bottom:1rem;">
-      <label for="eventPassword" style="display:block; font-weight:700; margin-bottom:0.25rem;">
-        Mot de passe de l’événement :
-      </label>
-      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
-    </div>
-
-    <h3>Uploader ton CSV et tes images</h3>
+    <h3>Uploader CSV & images</h3>
     <input type="file" id="guests" accept=".csv" /><br><br>
     <input type="file" id="images" accept="image/*" multiple /><br><br>
     <button id="send">Envoyer</button>
@@ -75,11 +59,10 @@
 
   <footer>
     <div class="container">
-      <p>© 2025 DigitalTables. Tous droits réservés.</p>
+      <p>© DigitalTables</p>
     </div>
   </footer>
 
-  <!-- Script Supabase -->
   <script type="module" src="supabase.js"></script>
 </body>
 </html>
