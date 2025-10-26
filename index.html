@@ -81,8 +81,8 @@
 
   <!-- Script principal -->
   <script type="module">
-    import "./supabase.js";
-
+    import './supabase.js'; // on importe juste pour exécuter le script
+    const supabase = window.supabase;
     const authDiv = document.getElementById('auth');
     const uploadDiv = document.getElementById('upload');
     const logoutBtn = document.getElementById('logout');
