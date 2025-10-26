@@ -151,14 +151,21 @@
 
       logoutBtn.onclick = async () => {
   try {
-    await supabase.auth.signOut();
-    // Pour GitHub Pages, mieux vaut recharger la page
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Erreur déconnexion :", error.message);
+      alert("Erreur déconnexion : " + error.message);
+      return;
+    }
+
+    // Force reload de la page pour reset complet de l'état
     window.location.href = window.location.pathname;
   } catch (err) {
-    console.error("Erreur déconnexion:", err);
-    alert("Erreur déconnexion : " + err.message);
+    console.error("Erreur inattendue lors de la déconnexion :", err);
+    alert("Erreur inattendue : " + err.message);
   }
 };
+
 
 
       supabase.auth.onAuthStateChange(() => refreshAuthState());
