@@ -1,20 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-console.log("✅ supabase.js chargé");
+export const SUPABASE_URL = "https://xrffjwulhrydrhlvuhlj.supabase.co";
+export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- Configuration Supabase ---
-const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// ================================
-// 🔹 FONCTIONS UTILITAIRES
-// ================================
-
-// Détection du séparateur CSV
+// --- Détection automatique du séparateur CSV ---
 function detectDelimiter(text) {
   const firstLine = text.split(/\r?\n/)[0];
   const countComma = (firstLine.match(/,/g) || []).length;
@@ -22,91 +13,41 @@ function detectDelimiter(text) {
   return countSemicolon > countComma ? ";" : ",";
 }
 
-// Création d’un JSON à partir d’un CSV
-async function csvToJson(file) {
-  const text = await file.text();
-  const delimiter = detectDelimiter(text);
-  const results = Papa.parse(text, {
-    header: true,
-    skipEmptyLines: true,
-    delimiter,
-  });
-  return results.data;
-}
-
-// ================================
-// 🔸 UPLOAD D’ÉVÉNEMENT
-// ================================
+// --- Upload CSV + images et création URL signée ---
 export async function uploadEvent({ file, eventName, isPrivate, password }) {
   try {
-    // Vérifie la session utilisateur
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      return { success: false, error: "Utilisateur non connecté" };
-    }
+    const text = await file.text();
+    const delimiter = detectDelimiter(text);
+    const results = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter });
 
-    const user = userData.user;
+    const jsonBlob = new Blob([JSON.stringify(results.data, null, 2)], { type: "application/json" });
+    const jsonName = `guests_${eventName}.json`;
 
-    // Conversion CSV -> JSON
-    const guests = await csvToJson(file);
-    const jsonBlob = new Blob([JSON.stringify(guests, null, 2)], {
-      type: "application/json",
-    });
+    // Upload CSV brut
+    const { error: csvError } = await supabase.storage.from("guests").upload(`${eventName}/${file.name}`, file, { upsert: true });
+    if (csvError) return { success: false, error: csvError.message };
 
-    // --- Upload CSV dans le bucket "guests" (privé) ---
-    const csvPath = `${eventName}/guests.csv`;
-    const { error: uploadCsvError } = await supabase.storage
-      .from("guests")
-      .upload(csvPath, file, { upsert: true });
-
-    if (uploadCsvError)
-      return { success: false, error: "Erreur upload CSV : " + uploadCsvError.message };
-
-    // --- Upload JSON public dans "public-guests" (si non privé) ---
-    let publicUrl = null;
-    if (!isPrivate) {
-      const jsonPath = `guests_${eventName}.json`;
-      const { error: jsonError } = await supabase.storage
-        .from("public-guests")
-        .upload(jsonPath, jsonBlob, { upsert: true });
-      if (jsonError)
-        return { success: false, error: "Erreur upload JSON public : " + jsonError.message };
-
-      publicUrl = `https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public/public-guests/${jsonPath}`;
-    }
-
-    // --- Si privé, créer une URL signée pour les invités ---
-    let signedUrl = null;
     if (isPrivate) {
-      const { data, error: signError } = await supabase.storage
-        .from("guests")
-        .createSignedUrl(csvPath, 60 * 60 * 24 * 7); // valide 7 jours
-      if (signError)
-        return { success: false, error: "Erreur création URL signée : " + signError.message };
-      signedUrl = data.signedUrl;
+      const { error } = await supabase.storage.from("guests").upload(`${eventName}/${jsonName}`, jsonBlob, { upsert: true });
+      if (error) return { success: false, error: error.message };
+
+      // Génère l'URL signée pour le CSV privé
+      const { data: signedUrlData, error: urlError } = await supabase
+        .storage
+        .from('guests')
+        .createSignedUrl(`${eventName}/${jsonName}`, 60 * 60); // lien valable 1h
+      if (urlError) return { success: false, error: urlError.message };
+
+      return { success: true, url: signedUrlData.signedUrl };
+
+    } else {
+      const { error } = await supabase.storage.from("public-guests").upload(jsonName, jsonBlob, { upsert: true });
+      if (error) return { success: false, error: error.message };
+      const publicUrl = `https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public/public-guests/${jsonName}`;
+      return { success: true, url: publicUrl };
     }
 
-    // --- Enregistrement de l’événement dans la table "events" ---
-    const { error: insertError } = await supabase.from("events").upsert(
-      {
-        name: eventName,
-        owner_id: user.id,
-        is_private: isPrivate,
-        password: isPrivate ? password : null,
-        json_public_url: publicUrl,
-        signed_url: signedUrl,
-        updated_at: new Date(),
-      },
-      { onConflict: "name" }
-    );
-
-    if (insertError)
-      return { success: false, error: "Erreur enregistrement événement : " + insertError.message };
-
-    console.log("✅ Événement enregistré :", eventName);
-    return { success: true, publicUrl, signedUrl };
   } catch (err) {
-    console.error("Erreur uploadEvent :", err);
     return { success: false, error: err.message };
   }
 }
