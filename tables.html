@@ -64,13 +64,8 @@
       color: #3e2f27;
     }
 
-    .result * { color: inherit; }
-
-    .result img {
-      max-width: 100%;
-      height: auto;
-      margin-top: 1em;
-      border-radius: 6px;
+    .result * {
+      color: inherit;
     }
 
     .match-btn {
@@ -103,108 +98,121 @@
   <div class="logo-container">
     <img src="images/LogoWlNoBck.png" alt="Logo mariage Willis et Lionel" class="logo-image">
   </div>
+
   <h1>Bienvenue/Benvenuta, Benvenuto/Welcome au mariage de</h1>
   <h2>Willis & Lionel</h2>
   <h3>Pour connaître ta table, per conoscere il tuo tavolo</h3>
   <p>Entre ton nom/Scrivi il tuo nome :</p>
   <input type="text" id="nameInput" list="names" placeholder="Commencez à taper...">
   <datalist id="names"></datalist>
+
   <div class="result" id="result"></div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
+    import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
     const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg';
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
+    const resultEl = document.getElementById("result");
+    const inputEl = document.getElementById("nameInput");
     let guests = [];
 
-    const inputEl = document.getElementById('nameInput');
-    const resultEl = document.getElementById('result');
-
-    function normalize(str) {
-      return String(str || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    // 🔹 Récupération du paramètre ?event=xxx
     const params = new URLSearchParams(window.location.search);
-    const eventName = params.get('event');
-    if (!eventName) {
-      resultEl.textContent = "❌ Aucun événement spécifié dans l'URL.";
+    const username = params.get("event");
+    if (!username) {
+      resultEl.textContent = "❌ Aucun événement spécifié dans l'URL (ex: ?event=willis2025)";
     } else {
-      loadEventData(eventName);
+      loadEvent(username);
     }
 
-    // 🔹 Fonction principale de chargement de l'événement
-    async function loadEventData(eventName) {
-      try {
-        // Cherche l'événement dans la table Supabase
-        const { data: event, error } = await supabase
-          .from("events")
-          .select("is_private, password, json_url")
-          .eq("username", eventName)
-          .single();
+    async function loadEvent(username) {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("username", username)
+        .single();
 
-        if (error || !event) throw new Error("Événement introuvable.");
+      if (error || !data) {
+        resultEl.textContent = "❌ Événement introuvable.";
+        return;
+      }
 
-        let jsonUrl = event.json_url;
-
-        // Si privé → demande mot de passe puis récupère URL signée
-        if (event.is_private) {
-          const enteredPass = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
-          if (!enteredPass || enteredPass !== event.password) {
-            resultEl.textContent = "❌ Mot de passe incorrect ou manquant.";
-            return;
-          }
-
-          // Crée un lien signé
-          const { data: signed } = await supabase
-            .storage
-            .from("private-guests")
-            .createSignedUrl(`guests_${eventName}.json`, 60 * 60);
-          jsonUrl = signed.signedUrl;
+      if (data.is_private) {
+        const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
+        if (pwd !== data.password) {
+          resultEl.textContent = "❌ Mot de passe incorrect.";
+          return;
         }
-
-        // Charge les données du JSON
-        const response = await fetch(jsonUrl);
-        if (!response.ok) throw new Error("Erreur HTTP " + response.status);
-        guests = await response.json();
-        fillDatalist();
-
-      } catch (err) {
-        console.error(err);
-        resultEl.textContent = "Erreur chargement des invités : " + err.message;
+        loadPrivateCsv(data.file_path);
+      } else {
+        loadPublicJson(username);
       }
     }
 
+    async function loadPublicJson(username) {
+      const url = `${supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Fichier JSON non trouvé.");
+        guests = await res.json();
+        fillDatalist();
+      } catch (e) {
+        resultEl.textContent = "❌ Erreur chargement JSON : " + e.message;
+      }
+    }
+
+    async function loadPrivateCsv(path) {
+      const { data, error } = await supabase.storage
+        .from("guests")
+        .createSignedUrl(path, 60 * 60); // URL signée 1h
+
+      if (error || !data?.signedUrl) {
+        resultEl.textContent = "❌ Erreur accès CSV privé : " + (error?.message || "");
+        return;
+      }
+
+      try {
+        const res = await fetch(data.signedUrl);
+        const text = await res.text();
+        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+        guests = parsed.data;
+        fillDatalist();
+      } catch (e) {
+        resultEl.textContent = "❌ Erreur lecture CSV : " + e.message;
+      }
+    }
+
+    function normalize(str) {
+      return String(str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     function fillDatalist() {
-      const dl = document.getElementById('names');
-      dl.innerHTML = '';
+      const dl = document.getElementById("names");
+      dl.innerHTML = "";
       guests.forEach(g => {
-        const opt = document.createElement('option');
+        const opt = document.createElement("option");
         opt.value = g.name;
         dl.appendChild(opt);
       });
     }
 
+    const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
     const tableImages = {
       "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
-      "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
+      "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg"
     };
 
     function showGuest(guest) {
       const message = guest.message || defaultMessage;
-      let html = `<span style="color: inherit;">
-                    ${message}<br><br>
-                    <strong>Ta table est :</strong> ${guest.table}
-                  </span>`;
+      let html = `<span>${message}<br><br><strong>Ta table est :</strong> ${guest.table}</span>`;
       const img = tableImages[guest.table];
       if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
       resultEl.innerHTML = html;
@@ -222,8 +230,8 @@
     }
 
     function searchAndDisplay(input) {
-      if (!input || input.trim() === '') {
-        resultEl.textContent = '';
+      if (!input || input.trim() === "") {
+        resultEl.textContent = "";
         return;
       }
       const n = normalize(input);
@@ -236,10 +244,10 @@
       showNoMatch(input);
     }
 
-    inputEl.addEventListener('input', e => searchAndDisplay(e.target.value));
-    inputEl.addEventListener('change', e => searchAndDisplay(e.target.value));
+    inputEl.addEventListener("input", e => searchAndDisplay(e.target.value));
+    inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
 
-    resultEl.addEventListener('click', e => {
+    resultEl.addEventListener("click", e => {
       const name = e.target.dataset && e.target.dataset.name;
       if (name) {
         inputEl.value = name;
@@ -248,5 +256,7 @@
       }
     });
   </script>
+
+  <script src="supabase.js" type="module"></script>
 </body>
 </html>
