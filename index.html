@@ -163,7 +163,7 @@
       const isPrivate = privateCsv.checked;
       const passwordValue = isPrivate ? eventPassword.value : null;
 
-      const { success, error } = await uploadEvent({ file, eventName, isPrivate, password: passwordValue });
+      const { success, error, url } = await uploadEvent({ file, eventName, isPrivate, password: passwordValue });
       if (!success) return alert("Erreur : " + error);
 
       // Upload images
@@ -172,10 +172,9 @@
         await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
       }
 
-      const url = `https://digitaltables.github.io/events/tables.html?user=${eventName}`;
       publicUrl.innerHTML = `
         ✅ Upload réussi !<br>
-        <strong>Ton lien invité :</strong><br>
+        <strong>Lien pour vos invités :</strong><br>
         <a href="${url}" target="_blank">${url}</a>
       `;
     };
