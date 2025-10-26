@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  
+
   <header>
     <div class="container">
       <div class="logo-title">
@@ -111,6 +111,9 @@
       const { error } = await supabase.auth.signUp({
         email: emailInput.value,
         password: passwordInput.value,
+        options: {
+          emailRedirectTo: "https://digitaltables.github.io/events/auth.html"
+        }
       });
       if (error) alert("Erreur inscription : " + error.message);
       else alert("Compte créé ! Vérifie ton email.");
