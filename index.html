@@ -24,12 +24,10 @@
     </div>
   </section>
 
-  <!-- Déconnexion -->
   <div style="text-align:center; margin-top:1rem;">
     <button id="logout" style="display:none;">Se déconnecter</button>
   </div>
 
-  <!-- Authentification -->
   <div id="auth" style="text-align:center; margin-top:2rem;">
     <h3>Connexion / Inscription</h3>
     <input type="email" id="email" placeholder="Email" />
@@ -38,10 +36,8 @@
     <button id="login">Se connecter</button>
   </div>
 
-  <!-- Upload CSV + images -->
   <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
 
-    <!-- Identifiant public -->
     <div style="margin-bottom:1rem;">
       <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
         Choisissez un identifiant public (visible dans l’URL) :
@@ -50,14 +46,12 @@
       <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
     </div>
 
-    <!-- Checkbox CSV privé -->
     <div style="margin-bottom:1rem;">
       <label>
         <input type="checkbox" id="privateCsv" /> CSV privé (accès via mot de passe)
       </label>
     </div>
 
-    <!-- Champ mot de passe (affiché uniquement si privé) -->
     <div id="passwordDiv" style="display:none; margin-bottom:1rem;">
       <label for="eventPassword" style="display:block; font-weight:700; margin-bottom:0.25rem;">
         Mot de passe de l’événement :
@@ -79,10 +73,9 @@
     </div>
   </footer>
 
-  <!-- Script principal -->
   <script type="module">
-    import './supabase.js'; // on importe juste pour exécuter le script
-    const supabase = window.supabase;
+    import { supabase, uploadEvent } from './supabase.js';
+
     const authDiv = document.getElementById('auth');
     const uploadDiv = document.getElementById('upload');
     const logoutBtn = document.getElementById('logout');
@@ -141,27 +134,19 @@
     refreshAuthState();
 
     // === CHECK DISPONIBILITÉ USERNAME ===
-    usernameInput.addEventListener('input', async () => {
+    usernameInput.addEventListener('blur', async () => {
       const name = usernameInput.value.trim().toLowerCase();
       if (!name) {
         usernameStatus.textContent = "";
         return;
       }
-      const { data, error } = await supabase
-        .from('events')
-        .select('name')
-        .eq('name', name);
+      const { data, error } = await supabase.from('events').select('username').eq('username', name);
       if (error) {
         usernameStatus.textContent = "❌ Erreur de vérification";
         return;
       }
-      if (data.length > 0) {
-        usernameStatus.style.color = "red";
-        usernameStatus.textContent = "⚠️ Identifiant déjà pris";
-      } else {
-        usernameStatus.style.color = "green";
-        usernameStatus.textContent = "✅ Disponible";
-      }
+      usernameStatus.style.color = data.length > 0 ? "red" : "green";
+      usernameStatus.textContent = data.length > 0 ? "⚠️ Identifiant déjà pris" : "✅ Disponible";
     });
 
     // === CHECKBOX PRIVÉ ===
@@ -176,15 +161,12 @@
       const file = document.getElementById('guests').files[0];
       if (!file) return alert("Ajoute un fichier CSV.");
       const isPrivate = privateCsv.checked;
-      const password = isPrivate ? eventPassword.value : null;
+      const passwordValue = isPrivate ? eventPassword.value : null;
 
-      const { success, error } = await uploadEvent({ file, eventName, isPrivate, password });
-      if (!success) {
-        alert("Erreur : " + error);
-        return;
-      }
+      const { success, error } = await uploadEvent({ file, eventName, isPrivate, password: passwordValue });
+      if (!success) return alert("Erreur : " + error);
 
-      // Upload des images
+      // Upload images
       const imgs = document.getElementById('images').files;
       for (let img of imgs) {
         await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
