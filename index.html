@@ -98,4 +98,105 @@
     const privateCsv = document.getElementById('privateCsv');
     const passwordDiv = document.getElementById('passwordDiv');
     const eventPassword = document.getElementById('eventPassword');
-    const publicUrl =
+    const publicUrl = document.getElementById('publicUrl');
+
+    // === AUTHENTIFICATION ===
+    async function refreshAuthState() {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        authDiv.style.display = 'none';
+        uploadDiv.style.display = 'block';
+        logoutBtn.style.display = 'inline-block';
+      } else {
+        authDiv.style.display = 'block';
+        uploadDiv.style.display = 'none';
+        logoutBtn.style.display = 'none';
+      }
+    }
+
+    signupBtn.onclick = async () => {
+      const { error } = await supabase.auth.signUp({
+        email: emailInput.value,
+        password: passwordInput.value,
+      });
+      if (error) alert("Erreur inscription : " + error.message);
+      else alert("Compte créé ! Vérifie ton email.");
+    };
+
+    loginBtn.onclick = async () => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailInput.value,
+        password: passwordInput.value,
+      });
+      if (error) alert("Erreur connexion : " + error.message);
+      else refreshAuthState();
+    };
+
+    logoutBtn.onclick = async () => {
+      await supabase.auth.signOut();
+      refreshAuthState();
+    };
+
+    supabase.auth.onAuthStateChange(() => refreshAuthState());
+    refreshAuthState();
+
+    // === CHECK DISPONIBILITÉ USERNAME ===
+    usernameInput.addEventListener('input', async () => {
+      const name = usernameInput.value.trim().toLowerCase();
+      if (!name) {
+        usernameStatus.textContent = "";
+        return;
+      }
+      const { data, error } = await supabase
+        .from('events')
+        .select('name')
+        .eq('name', name);
+      if (error) {
+        usernameStatus.textContent = "❌ Erreur de vérification";
+        return;
+      }
+      if (data.length > 0) {
+        usernameStatus.style.color = "red";
+        usernameStatus.textContent = "⚠️ Identifiant déjà pris";
+      } else {
+        usernameStatus.style.color = "green";
+        usernameStatus.textContent = "✅ Disponible";
+      }
+    });
+
+    // === CHECKBOX PRIVÉ ===
+    privateCsv.addEventListener('change', () => {
+      passwordDiv.style.display = privateCsv.checked ? 'block' : 'none';
+    });
+
+    // === ENVOI CSV + IMAGES ===
+    sendBtn.onclick = async () => {
+      const eventName = usernameInput.value.trim().toLowerCase();
+      if (!eventName) return alert("Choisis un identifiant d'événement.");
+      const file = document.getElementById('guests').files[0];
+      if (!file) return alert("Ajoute un fichier CSV.");
+      const isPrivate = privateCsv.checked;
+      const password = isPrivate ? eventPassword.value : null;
+
+      const { success, error } = await uploadEvent({ file, eventName, isPrivate, password });
+      if (!success) {
+        alert("Erreur : " + error);
+        return;
+      }
+
+      // Upload des images
+      const imgs = document.getElementById('images').files;
+      for (let img of imgs) {
+        await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
+      }
+
+      const url = `https://digitaltables.github.io/events/tables.html?user=${eventName}`;
+      publicUrl.innerHTML = `
+        ✅ Upload réussi !<br>
+        <strong>Ton lien invité :</strong><br>
+        <a href="${url}" target="_blank">${url}</a>
+      `;
+    };
+  </script>
+</body>
+</html>
