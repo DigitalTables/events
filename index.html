@@ -77,7 +77,6 @@
     import { supabase, uploadEvent } from './supabase.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-
       const authDiv = document.getElementById('auth');
       const uploadDiv = document.getElementById('upload');
       const logoutBtn = document.getElementById('logout');
@@ -123,7 +122,6 @@
       };
 
       loginBtn.onclick = async () => {
-        console.log("Login click"); // vérification
         const email = emailInput.value.trim();
         const password = passwordInput.value;
 
@@ -158,10 +156,8 @@
           alert("Erreur déconnexion : " + error.message);
           return;
         }
-        authDiv.style.display = 'block';
-        uploadDiv.style.display = 'none';
-        logoutBtn.style.display = 'none';
-        publicUrl.innerHTML = "";
+        await refreshAuthState();
+        alert("✅ Déconnecté avec succès !");
       };
 
       supabase.auth.onAuthStateChange(() => refreshAuthState());
@@ -200,7 +196,6 @@
         const { success, error, url } = await uploadEvent({ file, eventName, isPrivate, password: passwordValue });
         if (!success) return alert("Erreur : " + error);
 
-        // Upload images
         const imgs = document.getElementById('images').files;
         for (let img of imgs) {
           await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
@@ -212,8 +207,7 @@
           <a href="${url}" target="_blank">${url}</a>
         `;
       };
-
-    }); // end DOMContentLoaded
+    });
   </script>
 </body>
 </html>
