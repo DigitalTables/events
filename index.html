@@ -193,22 +193,44 @@
       });
 
       // === ENVOI CSV + IMAGES ===
-      sendBtn.onclick = async () => {
-          console.log("Upload déclenché");
-        const eventName = usernameInput.value.trim().toLowerCase();
-        if (!eventName) return alert("Choisis un identifiant d'événement.");
-        const file = document.getElementById('guests').files[0];
-        if (!file) return alert("Ajoute un fichier CSV.");
-        const isPrivate = privateCsv.checked;
-        const passwordValue = isPrivate ? eventPassword.value : null;
+      ssendBtn.onclick = async () => {
+  console.log("Upload déclenché");
+  try {
+    const file = document.getElementById('guests').files[0];
+    if (!file) return alert("Pas de fichier CSV sélectionné.");
+    const csvFile = new File([file], file.name, { type: "text/csv" });
+console.log("file text/csv");
+    const eventName = usernameInput.value.trim().toLowerCase();
+    if (!eventName) return alert("Choisis un identifiant d'événement.");
 
-        const { success, error, url } = await uploadEvent({ file, eventName, isPrivate, password: passwordValue });
-        if (!success) return alert("Erreur : " + error);
+    const isPrivate = privateCsv.checked;
+    const passwordValue = isPrivate ? eventPassword.value : null;
+console.log("juste avant uploadevent");
+    const { success, error, url } = await uploadEvent({ file: csvFile, eventName, isPrivate, password: passwordValue });
 
-        const imgs = document.getElementById('images').files;
-        for (let img of imgs) {
-          await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
-        }
+    if (!success) {
+      console.error("Erreur uploadEvent :", error);
+      return alert("Erreur : " + error);
+    }
+
+    // Upload images
+    const imgs = document.getElementById('images').files;
+    for (let img of imgs) {
+      const { error } = await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
+      if (error) console.warn("Erreur upload image :", error.message);
+    }
+
+    publicUrl.innerHTML = `
+      ✅ Upload réussi !<br>
+      <strong>Lien pour vos invités :</strong><br>
+      <a href="${url}" target="_blank">${url}</a>
+    `;
+  } catch (err) {
+    console.error("Erreur inattendue :", err);
+    alert("Erreur inattendue : " + err.message);
+  }
+};
+
 
         publicUrl.innerHTML = `
           ✅ Upload réussi !<br>
