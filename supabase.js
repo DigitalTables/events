@@ -2,7 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-console.log("✅ supabase.js chargé");
+console.log("✅ supabase.js 2 chargé");
 
 // <-- TA PROPRE INSTANCE SUPABASE (clé ANON publique incluse) -->
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
