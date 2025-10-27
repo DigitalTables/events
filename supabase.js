@@ -154,8 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // upsert event row in 'events'
     // our table earlier (SQL) used columns: username, event_password, signed_url (if private) or signed_url public link
-   const { data: userData } = await supabase.auth.getUser();
-const user = userData?.user;
+
 
 const eventRow = {
   username: username,
