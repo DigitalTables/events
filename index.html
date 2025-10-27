@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DigitalTables – Gestion des tables invités</title>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm"></script>
 </head>
 <body>
 
@@ -28,7 +29,6 @@
   <button id="logout" style="display:none;">Se déconnecter</button>
 </div>
 
-<!-- Section Auth -->
 <div id="auth" style="text-align:center; margin-top:2rem;">
   <h3>Connexion / Inscription</h3>
   <input type="email" id="email" placeholder="Email" />
@@ -37,7 +37,6 @@
   <button id="login">Se connecter</button>
 </div>
 
-<!-- Section Upload -->
 <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
   <div style="margin-bottom:1rem;">
     <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
@@ -115,7 +114,6 @@ login.onclick = async () => {
   if(error) alert("Erreur : "+error.message); else onLogin();
 };
 
-// Vérifier pseudo disponible
 async function checkPublicJsonExists(username) {
   const { data } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
   return data.some(f=>f.name===`guests_${username}.json`);
@@ -184,5 +182,6 @@ sendBtn.onclick = async () => {
   alert("✅ Upload terminé !");
 };
 </script>
+
 </body>
 </html>
