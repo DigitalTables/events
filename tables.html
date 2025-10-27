@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Placement des invités</title>
+  <title>Placement des invités – DigitalTables</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -20,20 +20,21 @@
   <datalist id="names"></datalist>
   <div class="result" id="result"></div>
 
-  <!-- Charge supabase.js (déjà configuré) -->
-  <script type="module" src="supabase.js"></script>
+  <!-- Charge le client Supabase déjà configuré -->
+  <script type="module" src="../supabase.js"></script>
 
   <script type="module">
-    // On récupère le client Supabase déjà créé dans supabase.js
     const supabase = window.supabase;
 
+    // Récupération du pseudo d’événement depuis l’URL
     const params = new URLSearchParams(window.location.search);
-    const username = params.get('user');
+    const username = params.get('event');
     const inputEl = document.getElementById('nameInput');
     const resultEl = document.getElementById('result');
     const titleEl = document.getElementById('event-title');
-    let guests = [];
+    const datalistEl = document.getElementById('names');
     const defaultMessage = "Nous sommes ravis que tu sois parmi nous, place à la fête!";
+    let guests = [];
 
     if (!username) {
       titleEl.textContent = "❌ Aucun événement spécifié dans l'URL.";
@@ -42,12 +43,13 @@
     }
 
     // ============================
-    // 🔹 Chargement de l'événement
+    // 🔹 Chargement de l’événement
     // ============================
     async function loadEvent(username) {
       titleEl.textContent = `Événement : ${username}`;
       resultEl.textContent = "Chargement des invités...";
 
+      // Récupère les infos de l’événement dans la table Supabase
       const { data: event, error } = await supabase
         .from('events')
         .select('*')
@@ -55,12 +57,13 @@
         .maybeSingle();
 
       if (error || !event) {
+        console.error("Erreur Supabase:", error);
         resultEl.textContent = "❌ Aucun événement trouvé.";
         return;
       }
 
-      // Si l’événement est privé, demander le mot de passe
-      if (event.event_password) {
+      // Si événement privé → demande du mot de passe
+      if (event.is_private) {
         const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
         if (pwd !== event.event_password) {
           resultEl.textContent = "❌ Mot de passe incorrect.";
@@ -69,18 +72,19 @@
       }
 
       try {
-        // Cas 1️⃣ : Événement privé → fichier CSV via URL signée
-        if (event.event_password && event.signed_url) {
+        // Cas 1️⃣ : Événement privé → chargement via URL signée (CSV)
+        if (event.is_private && event.signed_url) {
           const response = await fetch(event.signed_url);
+          if (!response.ok) throw new Error("Impossible de charger le fichier CSV privé");
           const csvText = await response.text();
           guests = csvToJson(csvText);
         }
 
         // Cas 2️⃣ : Événement public → JSON public
         else {
-          const publicJsonUrl = `https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public/public-guests/guests_${username}.json`;
+          const publicJsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
           const response = await fetch(publicJsonUrl);
-          if (!response.ok) throw new Error("JSON public introuvable");
+          if (!response.ok) throw new Error("Fichier JSON public introuvable");
           guests = await response.json();
         }
 
@@ -88,6 +92,7 @@
         resultEl.textContent = "✅ Liste des invités chargée !";
 
       } catch (err) {
+        console.error("Erreur:", err);
         resultEl.textContent = "❌ Erreur de chargement : " + err.message;
       }
     }
@@ -96,10 +101,11 @@
     // 🔹 Conversion CSV → JSON
     // ============================
     function csvToJson(csvText) {
-      const [headerLine, ...lines] = csvText.split(/\r?\n/).filter(Boolean);
-      const headers = headerLine.split(",").map(h => h.trim());
-      return lines.map(line => {
-        const values = line.split(",").map(v => v.trim());
+      const lines = csvText.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(/[,;]+/).map(h => h.trim());
+      return lines.slice(1).map(line => {
+        const values = line.split(/[,;]+/).map(v => v.trim());
         return Object.fromEntries(headers.map((h, i) => [h, values[i]]));
       });
     }
@@ -108,19 +114,21 @@
     // 🔹 Interface & recherche
     // ============================
     function fillDatalist() {
-      const dl = document.getElementById('names');
-      dl.innerHTML = '';
+      datalistEl.innerHTML = '';
       guests.forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g.name;
-        dl.appendChild(opt);
+        if (g.name) {
+          const opt = document.createElement('option');
+          opt.value = g.name;
+          datalistEl.appendChild(opt);
+        }
       });
     }
 
     const tableImages = {
       "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
       "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
-      // tu peux en ajouter d'autres ici
+      "Venise": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Venise.jpeg",
+      "Taj Mahal": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/TajMahal.jpeg"
     };
 
     function normalize(str) {
@@ -134,9 +142,9 @@
 
     function showGuest(guest) {
       const message = guest.message || defaultMessage;
-      let html = `<span>${message}<br><br><strong>Ta table est :</strong> ${guest.table}</span>`;
+      let html = `<span>${message}<br><br><strong>Ta table est :</strong> ${guest.table || "non précisée"}</span>`;
       const img = tableImages[guest.table];
-      if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
+      if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}" class="table-image">`;
       resultEl.innerHTML = html;
     }
 
