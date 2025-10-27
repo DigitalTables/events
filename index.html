@@ -8,229 +8,186 @@
 </head>
 <body>
 
-  <header>
-    <div class="container">
-      <div class="logo-title">
-        <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
-        <h1>DigitalTables</h1>
-      </div>
+<header>
+  <div class="container">
+    <div class="logo-title">
+      <img src="images/Logo.jpg" alt="Logo DigitalTables" class="logo" />
+      <h1>DigitalTables</h1>
     </div>
-  </header>
+  </div>
+</header>
 
-  <section class="hero">
-    <div class="container">
-      <h2>Attribuez facilement la table de vos invités</h2>
-      <p>Un outil simple et rapide qui apporte une touche unique à votre événement.</p> 
-    </div>
-  </section>
+<section class="hero">
+  <div class="container">
+    <h2>Attribuez facilement la table de vos invités</h2>
+    <p>Un outil simple et rapide qui apporte une touche unique à votre événement.</p> 
+  </div>
+</section>
 
-  <div style="text-align:center; margin-top:1rem;">
-    <button id="logout" style="display:none;">Se déconnecter</button>
+<div style="text-align:center; margin-top:1rem;">
+  <button id="logout" style="display:none;">Se déconnecter</button>
+</div>
+
+<div id="auth" style="text-align:center; margin-top:2rem;">
+  <h3>Connexion / Inscription</h3>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Mot de passe" />
+  <button id="signup">Créer un compte</button>
+  <button id="login">Se connecter</button>
+</div>
+
+<div id="upload" style="display:none; text-align:center; margin-top:2rem;">
+  <div style="margin-bottom:1rem;">
+    <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
+      Choisissez un identifiant public (visible dans l’URL) :
+    </label>
+    <input type="text" id="username" placeholder="ex: johanna-martin-2026" />
+    <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
   </div>
 
-  <div id="auth" style="text-align:center; margin-top:2rem;">
-    <h3>Connexion / Inscription</h3>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Mot de passe" />
-    <button id="signup">Créer un compte</button>
-    <button id="login">Se connecter</button>
+  <div style="margin-bottom:1rem;">
+    <label>
+      <input type="checkbox" id="privateCsv" /> CSV privé (accès via mot de passe)
+    </label>
   </div>
 
-  <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
-
-    <div style="margin-bottom:1rem;">
-      <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
-        Choisissez un identifiant public (visible dans l’URL) :
-      </label>
-      <input type="text" id="username" placeholder="ex: johanna-martin-2026" />
-      <div id="usernameStatus" style="margin-top:0.25rem; font-size:0.9rem;"></div>
-    </div>
-
-    <div style="margin-bottom:1rem;">
-      <label>
-        <input type="checkbox" id="privateCsv" /> CSV privé (accès via mot de passe)
-      </label>
-    </div>
-
-    <div id="passwordDiv" style="display:none; margin-bottom:1rem;">
-      <label for="eventPassword" style="display:block; font-weight:700; margin-bottom:0.25rem;">
-        Mot de passe de l’événement :
-      </label>
-      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
-    </div>
-
-    <h3>Uploader ton CSV et tes images</h3>
-    <input type="file" id="guests" accept=".csv" /><br><br>
-    <input type="file" id="images" accept="image/*" multiple /><br><br>
-    <button id="send">Envoyer</button>
-
-    <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
+  <div id="passwordDiv" style="display:none; margin-bottom:1rem;">
+    <label for="eventPassword" style="display:block; font-weight:700; margin-bottom:0.25rem;">
+      Mot de passe de l’événement :
+    </label>
+    <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
   </div>
 
-  <footer>
-    <div class="container">
-      <p>© 2025 DigitalTables. Tous droits réservés.</p>
-    </div>
-  </footer>
+  <h3>Uploader ton CSV et tes images</h3>
+  <input type="file" id="guests" accept=".csv" /><br><br>
+  <input type="file" id="images" accept="image/*" multiple /><br><br>
+  <button id="send">Envoyer</button>
 
-  <script type="module">
-    import { supabase, uploadEvent } from './supabase.js';
+  <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
+</div>
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const authDiv = document.getElementById('auth');
-      const uploadDiv = document.getElementById('upload');
-      const logoutBtn = document.getElementById('logout');
+<footer>
+  <div class="container">
+    <p>© 2025 DigitalTables. Tous droits réservés.</p>
+  </div>
+</footer>
 
-      const signupBtn = document.getElementById('signup');
-      const loginBtn = document.getElementById('login');
-      const emailInput = document.getElementById('email');
-      const passwordInput = document.getElementById('password');
+<script type="module">
+import { supabase, uploadEvent } from './supabase.js';
 
-      const sendBtn = document.getElementById('send');
-      const usernameInput = document.getElementById('username');
-      const usernameStatus = document.getElementById('usernameStatus');
-      const privateCsv = document.getElementById('privateCsv');
-      const passwordDiv = document.getElementById('passwordDiv');
-      const eventPassword = document.getElementById('eventPassword');
-      const publicUrl = document.getElementById('publicUrl');
+document.addEventListener('DOMContentLoaded', () => {
+  const authDiv = document.getElementById('auth');
+  const uploadDiv = document.getElementById('upload');
+  const logoutBtn = document.getElementById('logout');
+  const signupBtn = document.getElementById('signup');
+  const loginBtn = document.getElementById('login');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const sendBtn = document.getElementById('send');
+  const usernameInput = document.getElementById('username');
+  const usernameStatus = document.getElementById('usernameStatus');
+  const privateCsv = document.getElementById('privateCsv');
+  const passwordDiv = document.getElementById('passwordDiv');
+  const eventPassword = document.getElementById('eventPassword');
+  const publicUrl = document.getElementById('publicUrl');
 
-      // === AUTHENTIFICATION ===
-      async function refreshAuthState() {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          authDiv.style.display = 'none';
-          uploadDiv.style.display = 'block';
-          logoutBtn.style.display = 'inline-block';
-        } else {
-          authDiv.style.display = 'block';
-          uploadDiv.style.display = 'none';
-          logoutBtn.style.display = 'none';
-          publicUrl.innerHTML = "";
-        }
+  // === AUTHENTIFICATION ===
+  async function refreshAuthState() {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      authDiv.style.display = 'none';
+      uploadDiv.style.display = 'block';
+      logoutBtn.style.display = 'inline-block';
+    } else {
+      authDiv.style.display = 'block';
+      uploadDiv.style.display = 'none';
+      logoutBtn.style.display = 'none';
+      publicUrl.innerHTML = "";
+    }
+  }
+
+  signupBtn.onclick = async () => {
+    const { error } = await supabase.auth.signUp({
+      email: emailInput.value,
+      password: passwordInput.value,
+      options: { emailRedirectTo: "https://digitaltables.github.io/events/auth.html" }
+    });
+    if (error) alert("Erreur inscription : " + error.message);
+    else alert("Compte créé ! Vérifie ton email.");
+  };
+
+  loginBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    if (!email || !password) { alert("Veuillez saisir votre email et mot de passe."); return; }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { alert("Erreur connexion : " + error.message); return; }
+      refreshAuthState();
+    } catch (err) { console.error(err); alert("Erreur inattendue : " + err.message); }
+  };
+
+  logoutBtn.onclick = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) { alert("Erreur déconnexion : " + error.message); return; }
+      window.location.href = window.location.pathname;
+    } catch (err) { console.error(err); alert("Erreur inattendue : " + err.message); }
+  };
+
+  supabase.auth.onAuthStateChange(() => refreshAuthState());
+  refreshAuthState();
+
+  // === CHECK DISPONIBILITÉ USERNAME ===
+  usernameInput.addEventListener('blur', async () => {
+    const name = usernameInput.value.trim().toLowerCase();
+    if (!name) { usernameStatus.textContent = ""; return; }
+    const { data, error } = await supabase.from('events').select('username').eq('username', name);
+    if (error) { usernameStatus.textContent = "❌ Erreur de vérification"; return; }
+    usernameStatus.style.color = data.length > 0 ? "red" : "green";
+    usernameStatus.textContent = data.length > 0 ? "⚠️ Identifiant déjà pris" : "✅ Disponible";
+  });
+
+  // === CHECKBOX PRIVÉ ===
+  privateCsv.addEventListener('change', () => {
+    passwordDiv.style.display = privateCsv.checked ? 'block' : 'none';
+  });
+
+  // === ENVOI CSV + IMAGES ===
+  sendBtn.onclick = async () => {
+    console.log("Upload déclenché");
+    try {
+      const file = document.getElementById('guests').files[0];
+      if (!file) return alert("Pas de fichier CSV sélectionné.");
+      const csvFile = new File([file], file.name, { type: "text/csv" });
+      const eventName = usernameInput.value.trim().toLowerCase();
+      if (!eventName) return alert("Choisis un identifiant d'événement.");
+      const isPrivate = privateCsv.checked;
+      const passwordValue = isPrivate ? eventPassword.value : null;
+
+      const { success, error, url } = await uploadEvent({ file: csvFile, eventName, isPrivate, password: passwordValue });
+      if (!success) { console.error("Erreur uploadEvent :", error); return alert("Erreur : " + error); }
+
+      // Upload images
+      const imgs = document.getElementById('images').files;
+      for (let img of imgs) {
+        const { error } = await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
+        if (error) console.warn("Erreur upload image :", error.message);
       }
 
-      signupBtn.onclick = async () => {
-        const { error } = await supabase.auth.signUp({
-          email: emailInput.value,
-          password: passwordInput.value,
-          options: {
-            emailRedirectTo: "https://digitaltables.github.io/events/auth.html"
-          }
-        });
-        if (error) alert("Erreur inscription : " + error.message);
-        else alert("Compte créé ! Vérifie ton email.");
-      };
-
-      loginBtn.onclick = async () => {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!email || !password) {
-          alert("Veuillez saisir votre email et mot de passe.");
-          return;
-        }
-
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) {
-            alert("Erreur connexion : " + error.message);
-            return;
-          }
-
-          if (data.user && !data.user.email_confirmed_at) {
-            alert("✅ Veuillez confirmer votre email avant de vous connecter.");
-            return;
-          }
-
-          refreshAuthState();
-        } catch (err) {
-          console.error(err);
-          alert("Erreur inattendue : " + err.message);
-        }
-      };
-
-      logoutBtn.onclick = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Erreur déconnexion :", error.message);
-      alert("Erreur déconnexion : " + error.message);
-      return;
+      publicUrl.innerHTML = `
+        ✅ Upload réussi !<br>
+        <strong>Lien pour vos invités :</strong><br>
+        <a href="${url}" target="_blank">${url}</a>
+      `;
+    } catch (err) {
+      console.error("Erreur inattendue :", err);
+      alert("Erreur inattendue : " + err.message);
     }
+  };
 
-    // Force reload de la page pour reset complet de l'état
-    window.location.href = window.location.pathname;
-  } catch (err) {
-    console.error("Erreur inattendue lors de la déconnexion :", err);
-    alert("Erreur inattendue : " + err.message);
-  }
-};
-
-
-
-      supabase.auth.onAuthStateChange(() => refreshAuthState());
-      refreshAuthState();
-
-      // === CHECK DISPONIBILITÉ USERNAME ===
-      usernameInput.addEventListener('blur', async () => {
-        const name = usernameInput.value.trim().toLowerCase();
-        if (!name) {
-          usernameStatus.textContent = "";
-          return;
-        }
-        const { data, error } = await supabase.from('events').select('username').eq('username', name);
-        if (error) {
-          usernameStatus.textContent = "❌ Erreur de vérification";
-          return;
-        }
-        usernameStatus.style.color = data.length > 0 ? "red" : "green";
-        usernameStatus.textContent = data.length > 0 ? "⚠️ Identifiant déjà pris" : "✅ Disponible";
-      });
-
-      // === CHECKBOX PRIVÉ ===
-      privateCsv.addEventListener('change', () => {
-        passwordDiv.style.display = privateCsv.checked ? 'block' : 'none';
-      });
-
-      // === ENVOI CSV + IMAGES ===
-      sendBtn.onclick = async () => {
-  console.log("Upload déclenché");
-  try {
-    const file = document.getElementById('guests').files[0];
-    if (!file) return alert("Pas de fichier CSV sélectionné.");
-    const csvFile = new File([file], file.name, { type: "text/csv" });
-console.log("file text/csv");
-    const eventName = usernameInput.value.trim().toLowerCase();
-    if (!eventName) return alert("Choisis un identifiant d'événement.");
-
-    const isPrivate = privateCsv.checked;
-    const passwordValue = isPrivate ? eventPassword.value : null;
-console.log("juste avant uploadevent");
-    const { success, error, url } = await uploadEvent({ file: csvFile, eventName, isPrivate, password: passwordValue });
-
-    if (!success) {
-      console.error("Erreur uploadEvent :", error);
-      return alert("Erreur : " + error);
-    }
-
-    // Upload images
-    const imgs = document.getElementById('images').files;
-    for (let img of imgs) {
-      const { error } = await supabase.storage.from("images").upload(`${eventName}/${img.name}`, img, { upsert: true });
-      if (error) console.warn("Erreur upload image :", error.message);
-    }
-
-    publicUrl.innerHTML = `
-      ✅ Upload réussi !<br>
-      <strong>Lien pour vos invités :</strong><br>
-      <a href="${url}" target="_blank">${url}</a>
-    `;
-  } catch (err) {
-    console.error("Erreur inattendue :", err);
-    alert("Erreur inattendue : " + err.message);
-  }
-};
-
-  </script>
+});
+</script>
 </body>
 </html>
