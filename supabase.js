@@ -5,19 +5,17 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Fonction RGPD-friendly pour CSV privé via Edge Function
-export async function getPrivateCsv(path) {
-  if (!path) throw new Error("Path CSV manquant");
+export async function getPrivateCsv(username, password, userId) {
   const res = await fetch(`${supabaseUrl}/functions/v1/get-private-csv`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${supabaseAnonKey}`
     },
-    body: JSON.stringify({ path })
+    body: JSON.stringify({ path: `guests_${username}.csv` })
   });
 
   const data = await res.json();
-  if (!res.ok || !data.signedUrl) throw new Error(data.error || "Erreur CSV privé");
+  if (!res.ok || !data?.signedUrl) throw new Error(data.error || "Erreur CSV privé");
   return data.signedUrl;
 }
