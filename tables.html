@@ -48,10 +48,16 @@ async function loadEvent(username){
     const userId = session.data.session?.user.id;
     if(!userId) return resultEl.textContent="❌ Connecte-toi pour voir cet événement.";
     const csvUrl = await getPrivateCsv(`guests_${username}.csv`);
-    const csvText = await fetch(csvUrl).then(r=>r.text());
+ 
     console.log("URL CSV privé :", res);
 const csvText = await fetch(res).then(r => r.text());
 console.log("Contenu CSV :", csvText);
+
+const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+guests = parsed.data;
+fillDatalist();
+console.log("✅ Invités chargés (CSV privé) :", guests.length);
+
 
     guests = Papa.parse(csvText,{header:true,skipEmptyLines:true}).data;
   } else {
