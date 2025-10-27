@@ -4,7 +4,6 @@ import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 console.log("✅ supabase.js 3 chargé");
 
-// <-- TA PROPRE INSTANCE SUPABASE (clé ANON publique incluse) -->
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
 const supabase = createClient(supabaseUrl, supabaseKey);
