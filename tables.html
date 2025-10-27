@@ -6,11 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
-
-    const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    import { supabase } from './supabase.js';
 
     const defaultMessage = "Merci pour votre présence avec nous !";
     const resultEl = document.getElementById("result");
@@ -18,7 +14,6 @@
     const datalistEl = document.getElementById("names");
     let guests = [];
 
-    // --- Lire le paramètre event dans l'URL
     const params = new URLSearchParams(window.location.search);
     const eventUsername = params.get("event");
 
@@ -36,39 +31,30 @@
         return;
       }
 
-      console.log("📦 Données événement :", data);
-
       if (data.is_private) {
-        // --- Demander le mot de passe
         const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
         if (!pwd || pwd !== data.event_password) {
           resultEl.textContent = "❌ Mot de passe incorrect.";
           return;
         }
-        // --- Charger CSV privé
-        const csvUrl = data.signed_url;
-        loadPrivateCsv(csvUrl);
+        loadPrivateCsv(data.signed_url);
       } else {
-        // --- Charger JSON public
-        const jsonUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+        const jsonUrl = `https://xrffjwulhrydrhlvuhlj.supabase.co/storage/v1/object/public/public-guests/guests_${username}.json`;
         loadPublicJson(jsonUrl);
       }
     }
 
-    // --- Lecture d’un JSON public
     async function loadPublicJson(url) {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error("Impossible de charger le fichier public.");
         guests = await res.json();
         fillDatalist();
-        console.log("✅ Invités chargés (JSON) :", guests.length);
       } catch (err) {
         resultEl.textContent = "Erreur de chargement : " + err.message;
       }
     }
 
-    // --- Lecture d’un CSV privé
     async function loadPrivateCsv(url) {
       try {
         const res = await fetch(url);
@@ -77,19 +63,13 @@
         const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
         guests = parsed.data;
         fillDatalist();
-        console.log("✅ Invités chargés (CSV privé) :", guests.length);
       } catch (err) {
         resultEl.textContent = "Erreur de chargement du CSV : " + err.message;
       }
     }
 
     function normalize(str) {
-      return String(str || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+      return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
     }
 
     function fillDatalist() {
@@ -120,7 +100,7 @@
 
     function showGuest(guest) {
       const message = guest.message || defaultMessage;
-      let html = `<span style="color: inherit;">${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
+      let html = `<span>${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
       const img = tableImages[guest.table];
       if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
       resultEl.innerHTML = html;
@@ -131,10 +111,7 @@
     }
 
     function showMultiple(matches) {
-      const items = matches
-        .slice(0, 8)
-        .map((m) => `<button type="button" class="match-btn" data-name="${m.name}">${m.name}</button>`)
-        .join("");
+      const items = matches.slice(0, 8).map((m) => `<button type="button" class="match-btn" data-name="${m.name}">${m.name}</button>`).join("");
       resultEl.innerHTML = `<div>Plusieurs correspondances :<br>${items}</div>`;
     }
 
