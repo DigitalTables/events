@@ -134,7 +134,7 @@ img {
         }
 
         // 3. Récupère le CSV depuis le bucket (signed URL si privé)
-        let csvUrl = data.is_private ? data.signed_url : `https://YOUR_PROJECT_ID.supabase.co/storage/v1/object/public/${data.csv_path}`;
+        let csvUrl = data.is_private ? data.signed_url : `https://digitaltables.supabase.co/storage/v1/object/public/${data.csv_path}`;
         console.log("Chargement du CSV :", csvUrl);
 
         Papa.parse(csvUrl, {
