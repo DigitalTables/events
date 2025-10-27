@@ -94,7 +94,7 @@ img {
     <img src="../images/Logo.jpg" alt="Logo" class="logo-image">
   </div>
   <h1>Bienvenue au</h1>
-  <h2>Rothschild & Co Women business Network</h2>
+  <h2>Mariage de Louise et John</h2>
   <p>Entrez votre nom pour connaître votre table</p>
   <input type="text" id="nameInput" list="names" placeholder="Commencez à écrire...">
   <datalist id="names"></datalist>
@@ -102,7 +102,7 @@ img {
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script type="module">
-    import { supabase } from '../supabase.js';
+    import { supabase } from './supabase.js';
 
     const defaultMessage = "Merci pour votre présence avec nous !";
     const inputEl = document.getElementById('nameInput');
