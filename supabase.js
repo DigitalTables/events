@@ -154,12 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // upsert event row in 'events'
     // our table earlier (SQL) used columns: username, event_password, signed_url (if private) or signed_url public link
-    const eventRow = {
-      username: username,
-      event_password: isPrivate ? eventPassword : null,
-      signed_url: signedOrPublicUrl,
-      created_at: new Date().toISOString()
-    };
+   const { data: userData } = await supabase.auth.getUser();
+const user = userData?.user;
+
+const eventRow = {
+  username: username,
+  event_password: isPrivate ? eventPassword : null,
+  signed_url: signedOrPublicUrl,
+  created_at: new Date().toISOString(),
+  user_id: user.id,
+};
 
     const { error: upsertErr } = await supabase.from("events").upsert(eventRow, { onConflict: "username" });
     if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
