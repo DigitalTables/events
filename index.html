@@ -98,6 +98,29 @@ const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
 
+  // Vérifie si on revient d'un lien de confirmation Supabase
+const hash = window.location.hash;
+if (hash && hash.includes("access_token")) {
+  const params = new URLSearchParams(hash.substring(1));
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+
+  if (accessToken && refreshToken) {
+    // Restaure la session directement
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+    if (!error) {
+      console.log("✅ Session restaurée depuis lien email");
+      window.location.hash = ""; // nettoie l’URL
+    } else {
+      console.error("Erreur restauration session:", error);
+    }
+  }
+}
+
+  
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
   passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
