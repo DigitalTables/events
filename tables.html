@@ -21,7 +21,6 @@
     // --- Lire le paramètre event dans l'URL
     const params = new URLSearchParams(window.location.search);
     const eventUsername = params.get("event");
-    console.log("🎯 Événement demandé :", eventUsername);
 
     if (!eventUsername) {
       resultEl.textContent = "Aucun identifiant d’événement fourni dans l’URL.";
@@ -37,40 +36,35 @@
         return;
       }
 
-      console.log("📦 Données événement :", data);
+      let csvOrJsonUrl;
+      let isPrivate = data.is_private;
 
-      let csvUrl;
-      if (data.is_private) {
-        csvUrl = data.signed_url;
+      if (isPrivate) {
+        const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
+        if (!pwd || pwd !== data.event_password) {
+          resultEl.textContent = "❌ Mot de passe incorrect.";
+          return;
+        }
+        csvOrJsonUrl = data.signed_url; // URL signée pour CSV privé
+        loadPrivateCsv(csvOrJsonUrl);
       } else {
-        // si public, fichier JSON public dans le bucket
-        csvUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
-      }
-
-      console.log("🔗 URL chargée :", csvUrl);
-
-      // charger JSON public ou CSV privé
-      if (data.is_private) {
-        loadPrivateCsv(csvUrl);
-      } else {
-        loadPublicJson(csvUrl);
+        // JSON public
+        csvOrJsonUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+        loadPublicJson(csvOrJsonUrl);
       }
     }
 
-    // --- Lecture d’un JSON public (public-guests)
     async function loadPublicJson(url) {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error("Impossible de charger le fichier public.");
         guests = await res.json();
         fillDatalist();
-        console.log("✅ Invités chargés (JSON) :", guests.length);
       } catch (err) {
         resultEl.textContent = "Erreur de chargement : " + err.message;
       }
     }
 
-    // --- Lecture d’un CSV privé (via URL signée)
     async function loadPrivateCsv(url) {
       try {
         const res = await fetch(url);
@@ -79,7 +73,6 @@
         const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
         guests = parsed.data;
         fillDatalist();
-        console.log("✅ Invités chargés (CSV privé) :", guests.length);
       } catch (err) {
         resultEl.textContent = "Erreur de chargement du CSV : " + err.message;
       }
