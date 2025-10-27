@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordDiv = document.getElementById("passwordDiv");
   const eventPasswordInput = document.getElementById("eventPassword");
 
-  // Toggle password input
+  // Toggle password input for private events
   privateCsvCheckbox.addEventListener("change", () => {
     passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
   });
