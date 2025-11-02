@@ -6,11 +6,11 @@
   <script>
     // Si Supabase renvoie un lien avec un access_token dans le hash
     if (window.location.hash.includes("access_token")) {
-      // Redirige vers index.html en conservant le hash complet
-      window.location.replace("/index.html" + window.location.hash);
+      // Redirige vers index.html dans le dossier /events/
+      window.location.replace("/events/index.html" + window.location.hash);
     } else {
-      // Sinon, retourne simplement à la page d'accueil
-      window.location.replace("/index.html");
+      // Sinon retourne à la page d'accueil du sous-dossier
+      window.location.replace("/events/index.html");
     }
   </script>
 </head>
