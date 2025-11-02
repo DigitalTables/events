@@ -5,15 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DigitalTables – Gestion des tables invités</title>
   <link rel="stylesheet" href="style.css" />
-
- <!-- ✅ Correctif GitHub Pages pour Supabase -->
-<script>
-  // Redirige correctement vers /events/index.html en cas de lien Supabase
-  if (window.location.hash.includes("access_token")) {
-    window.location.replace("/events/index.html" + window.location.hash);
-  }
-</script>
-
 </head>
 <body>
 
@@ -87,9 +78,6 @@
 import { supabase, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-console.log("✅ Supabase.js initialisé");
-
-// DOM Elements
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
 const logoutBtn = document.getElementById("logout");
@@ -106,27 +94,6 @@ const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
-
-// Vérifie si on revient d'un lien de confirmation Supabase
-const hash = window.location.hash;
-if (hash && hash.includes("access_token")) {
-  const params = new URLSearchParams(hash.substring(1));
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-
-  if (accessToken && refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    });
-    if (!error) {
-      console.log("✅ Session restaurée depuis lien email");
-      window.location.hash = ""; // nettoie l’URL
-    } else {
-      console.error("Erreur restauration session:", error);
-    }
-  }
-}
 
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
@@ -151,6 +118,7 @@ logoutBtn.onclick = async () => {
   onLogout();
 };
 
+// Vérifie si déjà connecté
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) onLogin();
   else onLogout();
@@ -160,11 +128,17 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification
+// Authentification simplifiée sans mail de confirmation
 signup.onclick = async () => {
-  const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
-  if (error) alert("Erreur : " + error.message);
-  else alert("✅ Compte créé. Vérifie ton email pour confirmer.");
+  const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+  if (error) return alert("Erreur : " + error.message);
+
+  // Connexion directe après inscription
+  const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+  if (loginError) return alert("Erreur login : " + loginError.message);
+
+  onLogin();
+  alert("✅ Compte créé et connecté !");
 };
 login.onclick = async () => {
   const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
@@ -187,7 +161,7 @@ usernameInput.addEventListener("blur", async () => {
   usernameStatus.style.color = exists ? "red" : "green";
 });
 
-// Upload handler
+// Upload CSV et images
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -213,7 +187,6 @@ sendBtn.onclick = async () => {
   if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
 
   let publicOrSignedUrl = null;
-
   if (!isPrivate) {
     const publicJsonName = `guests_${username}.json`;
     const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
