@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DigitalTables – Gestion des tables invités</title>
   <link rel="stylesheet" href="style.css" />
+console.log("✅ correctif rediretion");
+ <!-- ✅ Correctif GitHub Pages pour Supabase -->
+<script>
+  // Redirige correctement vers /events/index.html en cas de lien Supabase
+  if (window.location.hash.includes("access_token")) {
+    window.location.replace("/events/index.html" + window.location.hash);
+  }
+</script>
 
-  <!-- ✅ Correctif GitHub Pages pour Supabase -->
-  <script>
-    // Empêche la 404 GitHub Pages après le clic sur le lien de confirmation Supabase
-    if (window.location.hash.includes("access_token")) {
-      // Redirige proprement vers index.html en conservant le hash
-      window.location.replace("/index.html" + window.location.hash);
-    }
-  </script>
 </head>
 <body>
 
