@@ -98,35 +98,25 @@ const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
 
-  // Vérifie si on revient d'un lien de confirmation Supabase
-const hash = window.location.hash;
-if (hash && hash.includes("access_token")) {
-  const params = new URLSearchParams(hash.substring(1));
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-
-  if (accessToken && refreshToken) {
-    // Restaure la session directement
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    });
-    if (!error) {
-      console.log("✅ Session restaurée depuis lien email");
-      window.location.hash = ""; // nettoie l’URL
-    } else {
-      console.error("Erreur restauration session:", error);
+/* ✅ Correction confirmation Supabase (fonctionne sur GitHub Pages) */
+(async function handleAuthRedirect() {
+  try {
+    if (window.location.hash.includes("access_token")) {
+      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+      if (error) {
+        console.error("Erreur lors du traitement du lien Supabase :", error.message);
+        alert("⚠️ Erreur lors de la confirmation. Essaie de te reconnecter.");
+      } else if (data?.session) {
+        console.log("✅ Session restaurée depuis le lien de confirmation !");
+        history.replaceState(null, "", window.location.origin + window.location.pathname);
+      }
     }
+  } catch (e) {
+    console.error("Erreur inattendue lors du traitement du lien Supabase :", e);
   }
-}
+})();
 
-  
-// Toggle mot de passe si privé
-privateCsvCheckbox.addEventListener("change", () => {
-  passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
-});
-
-// Connexion / déconnexion
+/* --- Interface connexion/déconnexion --- */
 function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
@@ -138,12 +128,10 @@ function onLogout() {
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
 }
-
 logoutBtn.onclick = async () => {
   await supabase.auth.signOut();
   onLogout();
 };
-
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) onLogin();
   else onLogout();
@@ -153,25 +141,35 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification
+/* --- Auth --- */
 signup.onclick = async () => {
-  const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
   if (error) alert("Erreur : " + error.message);
   else alert("✅ Compte créé. Vérifie ton email pour confirmer.");
 };
 login.onclick = async () => {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
   if (error) alert("Erreur : " + error.message);
   else onLogin();
 };
 
-// Vérifie si un JSON public existe déjà
+/* --- Gestion upload --- */
+privateCsvCheckbox.addEventListener("change", () => {
+  passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
+});
 async function checkPublicJsonExists(username) {
-  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
+  const { data, error } = await supabase.storage.from("public-guests").list("", {
+    search: `guests_${username}.json`
+  });
   if (error) return false;
   return data.some(f => f.name === `guests_${username}.json`);
 }
-
 usernameInput.addEventListener("blur", async () => {
   const username = usernameInput.value.trim();
   if (!username) { usernameStatus.textContent = ""; return; }
@@ -180,7 +178,7 @@ usernameInput.addEventListener("blur", async () => {
   usernameStatus.style.color = exists ? "red" : "green";
 });
 
-// Upload handler
+/* --- Upload CSV + images --- */
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -202,7 +200,11 @@ sendBtn.onclick = async () => {
 
   // Upload CSV
   const csvPath = `guests_${username}.csv`;
-  const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
+  const { error: csvUpErr } = await supabase.storage.from("guests").upload(
+    csvPath,
+    new Blob([text], { type: "text/csv" }),
+    { upsert: true }
+  );
   if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
 
   let publicOrSignedUrl = null;
@@ -211,13 +213,14 @@ sendBtn.onclick = async () => {
     // Public JSON
     const publicJsonName = `guests_${username}.json`;
     const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
+    const { error: jsonUpErr } = await supabase.storage.from("public-guests")
+      .upload(publicJsonName, jsonBlob, { upsert: true });
     if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
     publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
   } else {
     // Privé → Edge Function
     try {
-      const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
+      const signedUrl = await getPrivateCsv(`guests_${username}.csv`);
       publicOrSignedUrl = signedUrl;
     } catch(e) {
       return alert("Erreur génération URL signée pour le CSV privé: " + e.message);
@@ -237,15 +240,18 @@ sendBtn.onclick = async () => {
   // Upload images
   const imgs = imagesInput.files;
   for (const img of imgs) {
-    const { error: imgErr } = await supabase.storage.from("images").upload(`${username}/${img.name}`, img, { upsert: true });
+    const { error: imgErr } = await supabase.storage.from("images").upload(
+      `${username}/${img.name}`,
+      img,
+      { upsert: true }
+    );
     if (imgErr) return alert("Erreur upload image: " + imgErr.message);
   }
 
-  // Afficher le lien
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`;
 
   alert("✅ Upload terminé !");
 };
