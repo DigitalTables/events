@@ -63,15 +63,29 @@
   <h3>Uploader ton CSV et tes images</h3>
   <input type="file" id="guests" accept=".csv" /><br><br>
 
-  <!-- Upload Images avec table associée -->
-  <div id="imagesUpload" style="margin-top:1rem;">
-    <h4>Images des tables</h4>
-    <div id="imageInputsContainer"></div>
-    <button type="button" id="addImageBtn">Ajouter une image</button>
-  </div><br>
+  <div id="imagesContainer" style="margin-bottom:1rem;"></div>
+  <button id="addImageBtn">Ajouter une image pour une table</button><br><br>
 
   <button id="send">Envoyer</button>
+
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
+</div>
+
+<!-- Section Dashboard -->
+<div id="dashboard" style="display:none; text-align:center; margin-top:3rem;">
+  <h3>Vos événements</h3>
+  <table id="eventsTable" border="1" cellpadding="8" style="margin:0 auto; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th>Pseudo / Nom d'événement</th>
+        <th>Date & Heure</th>
+        <th>CSV</th>
+        <th>Images</th>
+        <th>Lien complet</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <footer>
@@ -81,11 +95,12 @@
 </footer>
 
 <script type="module">
-import { supabase, getPrivateCsv, getPrivateImages, checkPublicJsonExists } from './supabase.js';
+import { supabase, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
+const dashboardDiv = document.getElementById("dashboard");
 const logoutBtn = document.getElementById("logout");
 const email = document.getElementById("email");
 const password = document.getElementById("password");
@@ -93,15 +108,15 @@ const signup = document.getElementById("signup");
 const login = document.getElementById("login");
 const sendBtn = document.getElementById("send");
 const csvInput = document.getElementById("guests");
+const imagesContainer = document.getElementById("imagesContainer");
+const addImageBtn = document.getElementById("addImageBtn");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
-
-const imagesContainer = document.getElementById("imageInputsContainer");
-const addImageBtn = document.getElementById("addImageBtn");
+const eventsTableBody = document.querySelector("#eventsTable tbody");
 
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
@@ -112,14 +127,17 @@ privateCsvCheckbox.addEventListener("change", () => {
 function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
+  dashboardDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
   loadUserUploads();
 }
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
+  dashboardDiv.style.display = "none";
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
+  eventsTableBody.innerHTML = "";
 }
 
 logoutBtn.onclick = async () => {
@@ -137,12 +155,14 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification simplifiée sans mail de confirmation
+// Authentification
 signup.onclick = async () => {
   const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
   if (error) return alert("Erreur : " + error.message);
+
   const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
   if (loginError) return alert("Erreur login : " + loginError.message);
+
   onLogin();
   alert("✅ Compte créé et connecté !");
 };
@@ -152,7 +172,13 @@ login.onclick = async () => {
   else onLogin();
 };
 
-// Vérifie si un pseudo existe
+// Vérifie si pseudo disponible
+async function checkPublicJsonExists(username) {
+  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
+  if (error) return false;
+  return data.some(f => f.name === `guests_${username}.json`);
+}
+
 usernameInput.addEventListener("blur", async () => {
   const username = usernameInput.value.trim();
   if (!username) { usernameStatus.textContent = ""; return; }
@@ -174,12 +200,11 @@ function addImageInput() {
   const tableInput = document.createElement("input");
   tableInput.type = "text";
   tableInput.placeholder = "Nom de la table";
-  
+
   div.appendChild(imgInput);
   div.appendChild(tableInput);
   imagesContainer.appendChild(div);
 }
-
 addImageBtn.addEventListener("click", addImageInput);
 addImageInput();
 
@@ -246,9 +271,10 @@ sendBtn.onclick = async () => {
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</strong> <br><code>${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
+  loadUserUploads(); // actualiser dashboard
 };
 
 // Charger les uploads existants pour l’utilisateur
@@ -257,14 +283,53 @@ async function loadUserUploads() {
   const user = userData?.user;
   if (!user) return;
 
-  const { data: events } = await supabase.from("events").select("*").eq("user_id", user.id);
+  const { data: events } = await supabase.from("events").select("*").eq("user_id", user.id).order('uploaded_at', { ascending: false });
+  eventsTableBody.innerHTML = "";
   if (!events || events.length === 0) return;
 
   events.forEach(e => {
-    console.log("Événement existant :", e.username, e.uploaded_at, e.signed_url);
-  });
+    const row = document.createElement("tr");
 
-  // Tu peux ensuite afficher dans un tableau ou div le CSV, images et URL
+    // Pseudo
+    const pseudoTd = document.createElement("td");
+    pseudoTd.textContent = e.username;
+    row.appendChild(pseudoTd);
+
+    // Date / Heure
+    const dateTd = document.createElement("td");
+    dateTd.textContent = new Date(e.uploaded_at).toLocaleString();
+    row.appendChild(dateTd);
+
+    // CSV
+    const csvTd = document.createElement("td");
+    const csvLink = document.createElement("a");
+    csvLink.href = e.is_private ? "#" : `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+    csvLink.textContent = "Télécharger CSV";
+    if (e.is_private) csvLink.onclick = async () => {
+      try {
+        const signedUrl = await getPrivateCsv(e.username, e.event_password, user.id);
+        window.open(signedUrl, "_blank");
+      } catch(err) { alert("Erreur récupération CSV privé: "+err.message); }
+    };
+    csvTd.appendChild(csvLink);
+    row.appendChild(csvTd);
+
+    // Images
+    const imgTd = document.createElement("td");
+    imgTd.textContent = "Voir dans /images/" + e.username;
+    row.appendChild(imgTd);
+
+    // Lien complet
+    const linkTd = document.createElement("td");
+    const linkA = document.createElement("a");
+    linkA.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
+    linkA.target = "_blank";
+    linkA.textContent = "Lien événement";
+    linkTd.appendChild(linkA);
+    row.appendChild(linkTd);
+
+    eventsTableBody.appendChild(row);
+  });
 }
 
 </script>
