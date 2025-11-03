@@ -70,8 +70,6 @@ async function loadEvent(username) {
     return;
   }
 
-  console.log("📦 Données événement :", data);
-
   if (data.is_private) {
     const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
     if (!pwd || pwd !== data.event_password) {
@@ -129,6 +127,7 @@ function fillDatalist() {
   });
 }
 
+// Images associées aux tables
 const tableImages = {
   "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
   "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
