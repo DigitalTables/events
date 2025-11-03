@@ -74,42 +74,42 @@ async function loadEvent(username) {
   imagesMapping = data.images_mapping || {};
 
   if (data.is_private) {
-    const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
-    if (!pwd || pwd !== data.event_password) {
-      resultEl.textContent = "❌ Mot de passe incorrect.";
-      return;
-    }
-
-    try {
-      const session = await supabase.auth.getSession();
-      const userId = session.data.session?.user.id;
-      if (!userId) throw new Error("Utilisateur non connecté");
-
-      const signedUrl = await getPrivateCsv(username, pwd, userId);
-      const csvText = await fetch(signedUrl).then(r => r.text());
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-      guests = parsed.data;
-      fillDatalist();
-      console.log("✅ Invités chargés (CSV privé) :", guests.length);
-    } catch(e) {
-      console.error(e);
-      resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
-    }
-  } else {
-    const csvUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
-    try {
-      const res = await fetch(csvUrl);
-      if (!res.ok) throw new Error("Impossible de charger le fichier CSV public.");
-      const csvText = await res.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-      guests = parsed.data;
-      fillDatalist();
-      console.log("✅ Invités chargés (CSV public) :", guests.length);
-    } catch(e) {
-      console.error(e);
-      resultEl.textContent = "Erreur chargement CSV public : " + e.message;
-    }
+  // Récupérer CSV privé via signed URL
+  const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
+  if (!pwd || pwd !== data.event_password) {
+    resultEl.textContent = "❌ Mot de passe incorrect.";
+    return;
   }
+  try {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) throw new Error("Utilisateur non connecté");
+
+    const signedUrl = await getPrivateCsv(username, pwd, userId);
+    const csvText = await fetch(signedUrl).then(r => r.text());
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    guests = parsed.data;
+    fillDatalist();
+    console.log("✅ Invités chargés (CSV privé) :", guests.length);
+  } catch(e) {
+    console.error(e);
+    resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
+  }
+} else {
+  // Événement public → charger JSON depuis public-guests
+  const jsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+  try {
+    const res = await fetch(jsonUrl);
+    if (!res.ok) throw new Error("Impossible de charger le fichier JSON public.");
+    guests = await res.json();
+    fillDatalist();
+    console.log("✅ Invités chargés (JSON public) :", guests.length);
+  } catch(e) {
+    console.error(e);
+    resultEl.textContent = "Erreur chargement JSON public : " + e.message;
+  }
+}
+
 }
 
 function normalize(str) {
