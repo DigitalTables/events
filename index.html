@@ -62,16 +62,16 @@
 
   <h3>Uploader ton CSV et tes images</h3>
   <input type="file" id="guests" accept=".csv" /><br><br>
-  <input type="file" id="images" accept="image/*" multiple /><br><br>
+
+  <!-- Upload Images avec table associée -->
+  <div id="imagesUpload" style="margin-top:1rem;">
+    <h4>Images des tables</h4>
+    <div id="imageInputsContainer"></div>
+    <button type="button" id="addImageBtn">Ajouter une image</button>
+  </div><br>
+
   <button id="send">Envoyer</button>
-
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
-</div>
-
-<!-- Dashboard utilisateur -->
-<div id="dashboard" style="display:none; margin-top:2rem;">
-  <h3>Mon Tableau de Bord</h3>
-  <div id="dashboardContent"></div>
 </div>
 
 <footer>
@@ -81,13 +81,11 @@
 </footer>
 
 <script type="module">
-import { supabase, getPrivateCsv, getPrivateImages } from './supabase.js';
+import { supabase, getPrivateCsv, getPrivateImages, checkPublicJsonExists } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
-const dashboardDiv = document.getElementById("dashboard");
-const dashboardContent = document.getElementById("dashboardContent");
 const logoutBtn = document.getElementById("logout");
 const email = document.getElementById("email");
 const password = document.getElementById("password");
@@ -95,13 +93,15 @@ const signup = document.getElementById("signup");
 const login = document.getElementById("login");
 const sendBtn = document.getElementById("send");
 const csvInput = document.getElementById("guests");
-const imagesInput = document.getElementById("images");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
+
+const imagesContainer = document.getElementById("imageInputsContainer");
+const addImageBtn = document.getElementById("addImageBtn");
 
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
@@ -113,12 +113,11 @@ function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
-  loadDashboard();
+  loadUserUploads();
 }
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
-  dashboardDiv.style.display = "none";
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
 }
@@ -138,7 +137,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification simplifiée
+// Authentification simplifiée sans mail de confirmation
 signup.onclick = async () => {
   const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
   if (error) return alert("Erreur : " + error.message);
@@ -153,13 +152,7 @@ login.onclick = async () => {
   else onLogin();
 };
 
-// Vérifie si un pseudo est déjà utilisé
-async function checkPublicJsonExists(username) {
-  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
-  if (error) return false;
-  return data.some(f => f.name === `guests_${username}.json`);
-}
-
+// Vérifie si un pseudo existe
 usernameInput.addEventListener("blur", async () => {
   const username = usernameInput.value.trim();
   if (!username) { usernameStatus.textContent = ""; return; }
@@ -167,6 +160,28 @@ usernameInput.addEventListener("blur", async () => {
   usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé" : "✅ Disponible";
   usernameStatus.style.color = exists ? "red" : "green";
 });
+
+// Gestion images upload
+function addImageInput() {
+  const div = document.createElement("div");
+  div.style.marginBottom = "0.5rem";
+
+  const imgInput = document.createElement("input");
+  imgInput.type = "file";
+  imgInput.accept = "image/*";
+  imgInput.style.marginRight = "0.5rem";
+
+  const tableInput = document.createElement("input");
+  tableInput.type = "text";
+  tableInput.placeholder = "Nom de la table";
+  
+  div.appendChild(imgInput);
+  div.appendChild(tableInput);
+  imagesContainer.appendChild(div);
+}
+
+addImageBtn.addEventListener("click", addImageInput);
+addImageInput();
 
 // Upload CSV et images
 sendBtn.onclick = async () => {
@@ -176,7 +191,6 @@ sendBtn.onclick = async () => {
 
   const username = usernameInput.value.trim();
   if (!username) return alert("❌ Choisis un identifiant public.");
-
   const isPrivate = privateCsvCheckbox.checked;
   const eventPassword = eventPasswordInput.value.trim();
   if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
@@ -195,12 +209,7 @@ sendBtn.onclick = async () => {
 
   let publicOrSignedUrl = null;
   if (!isPrivate) {
-    // Public → JSON pour tables.html
-    const publicJsonName = `guests_${username}.json`;
-    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
-    if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`; // lien CSV pour dashboard
+    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
   } else {
     try {
       const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
@@ -210,7 +219,7 @@ sendBtn.onclick = async () => {
     }
   }
 
-  // Enregistrer l’événement avec uploaded_at
+  // Enregistrer l’événement
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     event_password: isPrivate ? eventPassword : null,
@@ -222,92 +231,42 @@ sendBtn.onclick = async () => {
   if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
 
   // Upload images
-  const imgs = imagesInput.files;
-  for (const img of imgs) {
-    const { error: imgErr } = await supabase.storage.from("images").upload(`${username}/${img.name}`, img, { upsert: true });
+  const imageDivs = imagesContainer.querySelectorAll("div");
+  for (const div of imageDivs) {
+    const imgFile = div.querySelector("input[type='file']").files[0];
+    const tableName = div.querySelector("input[type='text']").value.trim();
+    if (!imgFile || !tableName) continue;
+
+    const imgPath = `${username}/tables/${tableName}_${imgFile.name}`;
+    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
     if (imgErr) return alert("Erreur upload image: " + imgErr.message);
   }
 
-  // Afficher le lien événement
+  // Afficher le lien
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</strong> <br><code>Lien CSV : ${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
-  loadDashboard(); // actualiser dashboard
 };
 
-// ---------------------------
-// DASHBOARD UTILISATEUR
-// ---------------------------
-async function loadDashboard() {
+// Charger les uploads existants pour l’utilisateur
+async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return;
 
-  const { data: events, error } = await supabase
-    .from("events")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("uploaded_at", { ascending: false });
+  const { data: events } = await supabase.from("events").select("*").eq("user_id", user.id);
+  if (!events || events.length === 0) return;
 
-  if (error) return dashboardContent.textContent = "Erreur chargement tableau de bord : " + error.message;
-  if (!events || events.length === 0) {
-    dashboardContent.textContent = "Vous n'avez encore uploadé aucun événement.";
-    return;
-  }
+  events.forEach(e => {
+    console.log("Événement existant :", e.username, e.uploaded_at, e.signed_url);
+  });
 
-  dashboardDiv.style.display = "block";
-  dashboardContent.innerHTML = "";
-
-  for (const ev of events) {
-    const evDiv = document.createElement("div");
-    evDiv.style.border = "1px solid #d0bfae";
-    evDiv.style.padding = "1rem";
-    evDiv.style.borderRadius = "8px";
-    evDiv.style.marginBottom = "1rem";
-
-    const uploadedAt = ev.uploaded_at ? new Date(ev.uploaded_at).toLocaleString() : "—";
-
-    // CSV
-    let csvLink = "—";
-    if (ev.is_private && ev.username) {
-      try {
-        const signedUrl = await getPrivateCsv(ev.username, ev.event_password, user.id);
-        csvLink = `<a href="${signedUrl}" target="_blank">Télécharger CSV privé</a>`;
-      } catch(e) {
-        csvLink = "Erreur récupération CSV privé";
-      }
-    } else if (!ev.is_private && ev.username) {
-      csvLink = `<a href="${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${ev.username}.csv" target="_blank">Télécharger CSV</a>`;
-    }
-
-    // Images
-    let imageLinks = "—";
-    if (ev.username) {
-      try {
-        const images = await getPrivateImages(ev.username, user.id);
-        if (images.length > 0) {
-          imageLinks = images.map(img => `<a href="${img.url}" target="_blank">${img.name}</a>`).join("<br>");
-        }
-      } catch(e) {
-        imageLinks = "Erreur récupération images";
-      }
-    }
-
-    const publicLink = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(ev.username)}`;
-
-    evDiv.innerHTML = `
-      <strong>Pseudo public :</strong> ${ev.username || "—"}<br>
-      <strong>Date/heure upload :</strong> ${uploadedAt}<br>
-      <strong>CSV :</strong> ${csvLink}<br>
-      <strong>Images :</strong> ${imageLinks}<br>
-      <strong>Lien de l'événement :</strong> <a href="${publicLink}" target="_blank">${publicLink}</a>
-    `;
-    dashboardContent.appendChild(evDiv);
-  }
+  // Tu peux ensuite afficher dans un tableau ou div le CSV, images et URL
 }
+
 </script>
 
 </body>
