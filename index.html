@@ -63,29 +63,22 @@
   <h3>Uploader ton CSV et tes images</h3>
   <input type="file" id="guests" accept=".csv" /><br><br>
 
-  <div id="imagesContainer" style="margin-bottom:1rem;"></div>
-  <button id="addImageBtn">Ajouter une image pour une table</button><br><br>
+  <div id="tablesImagesContainer">
+    <p>Associez vos images aux tables :</p>
+    <div id="tableImageRows"></div>
+    <button id="addTableImageRow">Ajouter une table/image</button>
+  </div>
 
+  <br>
   <button id="send">Envoyer</button>
 
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
 </div>
 
 <!-- Section Dashboard -->
-<div id="dashboard" style="display:none; text-align:center; margin-top:3rem;">
-  <h3>Vos événements</h3>
-  <table id="eventsTable" border="1" cellpadding="8" style="margin:0 auto; border-collapse:collapse;">
-    <thead>
-      <tr>
-        <th>Pseudo / Nom d'événement</th>
-        <th>Date & Heure</th>
-        <th>CSV</th>
-        <th>Images</th>
-        <th>Lien complet</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<div id="dashboard" style="display:none; margin-top:3rem; padding: 0 2rem;">
+  <h3 style="text-align:center; margin-bottom:1rem;">Vos événements</h3>
+  <div id="eventsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;"></div>
 </div>
 
 <footer>
@@ -100,7 +93,6 @@ import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
-const dashboardDiv = document.getElementById("dashboard");
 const logoutBtn = document.getElementById("logout");
 const email = document.getElementById("email");
 const password = document.getElementById("password");
@@ -108,15 +100,15 @@ const signup = document.getElementById("signup");
 const login = document.getElementById("login");
 const sendBtn = document.getElementById("send");
 const csvInput = document.getElementById("guests");
-const imagesContainer = document.getElementById("imagesContainer");
-const addImageBtn = document.getElementById("addImageBtn");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
-const eventsTableBody = document.querySelector("#eventsTable tbody");
+
+const tableImageRows = document.getElementById("tableImageRows");
+const addTableImageRowBtn = document.getElementById("addTableImageRow");
 
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
@@ -127,17 +119,16 @@ privateCsvCheckbox.addEventListener("change", () => {
 function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
-  dashboardDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
+  dashboardDiv.style.display = "block";
   loadUserUploads();
 }
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
-  dashboardDiv.style.display = "none";
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
-  eventsTableBody.innerHTML = "";
+  dashboardDiv.style.display = "none";
 }
 
 logoutBtn.onclick = async () => {
@@ -155,14 +146,12 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification
+// Authentification simplifiée
 signup.onclick = async () => {
   const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
   if (error) return alert("Erreur : " + error.message);
-
   const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
   if (loginError) return alert("Erreur login : " + loginError.message);
-
   onLogin();
   alert("✅ Compte créé et connecté !");
 };
@@ -172,7 +161,7 @@ login.onclick = async () => {
   else onLogin();
 };
 
-// Vérifie si pseudo disponible
+// Vérifie si un pseudo est déjà utilisé
 async function checkPublicJsonExists(username) {
   const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
   if (error) return false;
@@ -187,26 +176,19 @@ usernameInput.addEventListener("blur", async () => {
   usernameStatus.style.color = exists ? "red" : "green";
 });
 
-// Gestion images upload
-function addImageInput() {
+// Gestion des lignes table → image
+function addTableImageRow() {
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
-
-  const imgInput = document.createElement("input");
-  imgInput.type = "file";
-  imgInput.accept = "image/*";
-  imgInput.style.marginRight = "0.5rem";
-
-  const tableInput = document.createElement("input");
-  tableInput.type = "text";
-  tableInput.placeholder = "Nom de la table";
-
-  div.appendChild(imgInput);
-  div.appendChild(tableInput);
-  imagesContainer.appendChild(div);
+  div.innerHTML = `
+    <input type="text" placeholder="Nom de la table" style="width: 200px; margin-right:0.5rem;" />
+    <input type="file" accept="image/*" />
+    <button type="button" class="removeRow">❌</button>
+  `;
+  div.querySelector(".removeRow").onclick = () => div.remove();
+  tableImageRows.appendChild(div);
 }
-addImageBtn.addEventListener("click", addImageInput);
-addImageInput();
+addTableImageRowBtn.addEventListener("click", addTableImageRow);
 
 // Upload CSV et images
 sendBtn.onclick = async () => {
@@ -216,13 +198,13 @@ sendBtn.onclick = async () => {
 
   const username = usernameInput.value.trim();
   if (!username) return alert("❌ Choisis un identifiant public.");
+
   const isPrivate = privateCsvCheckbox.checked;
   const eventPassword = eventPasswordInput.value.trim();
   if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
 
   const csvFile = csvInput.files[0];
   if (!csvFile) return alert("❌ Choisis un fichier CSV.");
-
   const text = await csvFile.text();
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
   const rows = parsed.data;
@@ -232,9 +214,33 @@ sendBtn.onclick = async () => {
   const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
   if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
 
+  // Images mapping
+  const imagesMapping = {};
+  const tableImageDivs = tableImageRows.querySelectorAll("div");
+  for (const div of tableImageDivs) {
+    const tableName = div.querySelector("input[type='text']").value.trim();
+    const imgFile = div.querySelector("input[type='file']").files[0];
+    if (!tableName || !imgFile) continue;
+
+    const safeFileName = imgFile.name
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "_");
+
+    const imgPath = `${username}/tables/${safeFileName}`;
+    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
+    if (imgErr) return alert("Erreur upload image: " + imgErr.message);
+
+    imagesMapping[tableName] = imgPath;
+  }
+
+  // Upload public JSON si nécessaire
   let publicOrSignedUrl = null;
   if (!isPrivate) {
-    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
+    const publicJsonName = `guests_${username}.json`;
+    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
+    if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
+    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
   } else {
     try {
       const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
@@ -244,95 +250,120 @@ sendBtn.onclick = async () => {
     }
   }
 
-  // Enregistrer l’événement
+  // Enregistrer l’événement + mapping images
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     event_password: isPrivate ? eventPassword : null,
     signed_url: publicOrSignedUrl,
     is_private: isPrivate,
     user_id: user.id,
-    uploaded_at: new Date().toISOString()
+    uploaded_at: new Date(),
+    images_mapping: imagesMapping
   }, { onConflict: "username" });
   if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
-
-  // Upload images
-  const imageDivs = imagesContainer.querySelectorAll("div");
-  for (const div of imageDivs) {
-    const imgFile = div.querySelector("input[type='file']").files[0];
-    const tableName = div.querySelector("input[type='text']").value.trim();
-    if (!imgFile || !tableName) continue;
-
-    const imgPath = `${username}/tables/${tableName}_${imgFile.name}`;
-    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
-    if (imgErr) return alert("Erreur upload image: " + imgErr.message);
-  }
 
   // Afficher le lien
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</strong> <br><code>${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
-  loadUserUploads(); // actualiser dashboard
+  loadUserUploads();
 };
 
-// Charger les uploads existants pour l’utilisateur
+// Dashboard
+const dashboardDiv = document.getElementById("dashboard");
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return;
 
-  const { data: events } = await supabase.from("events").select("*").eq("user_id", user.id).order('uploaded_at', { ascending: false });
-  eventsTableBody.innerHTML = "";
-  if (!events || events.length === 0) return;
+  const { data: events } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", user.id)
+    .order('uploaded_at', { ascending: false });
+
+  const container = document.getElementById("eventsContainer");
+  container.innerHTML = "";
+  if (!events || events.length === 0) {
+    container.textContent = "Vous n'avez aucun événement pour l'instant.";
+    return;
+  }
 
   events.forEach(e => {
-    const row = document.createElement("tr");
+    const card = document.createElement("div");
+    card.style.background = "rgba(255,255,255,0.8)";
+    card.style.borderRadius = "12px";
+    card.style.padding = "1rem";
+    card.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+    card.style.display = "flex";
+    card.style.flexDirection = "column";
+    card.style.gap = "0.5rem";
 
-    // Pseudo
-    const pseudoTd = document.createElement("td");
-    pseudoTd.textContent = e.username;
-    row.appendChild(pseudoTd);
+    const title = document.createElement("h4");
+    title.textContent = e.username;
+    title.style.margin = "0";
+    title.style.fontFamily = "'Playfair Display', serif";
+    title.style.color = "#2e1f17";
+    card.appendChild(title);
 
-    // Date / Heure
-    const dateTd = document.createElement("td");
-    dateTd.textContent = new Date(e.uploaded_at).toLocaleString();
-    row.appendChild(dateTd);
+    const date = document.createElement("div");
+    date.textContent = "📅 " + new Date(e.uploaded_at).toLocaleString();
+    date.style.fontSize = "0.9rem";
+    card.appendChild(date);
 
     // CSV
-    const csvTd = document.createElement("td");
     const csvLink = document.createElement("a");
-    csvLink.href = e.is_private ? "#" : `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
     csvLink.textContent = "Télécharger CSV";
-    if (e.is_private) csvLink.onclick = async () => {
-      try {
-        const signedUrl = await getPrivateCsv(e.username, e.event_password, user.id);
-        window.open(signedUrl, "_blank");
-      } catch(err) { alert("Erreur récupération CSV privé: "+err.message); }
-    };
-    csvTd.appendChild(csvLink);
-    row.appendChild(csvTd);
+    csvLink.style.display = "inline-block";
+    csvLink.style.padding = "0.4rem 0.6rem";
+    csvLink.style.background = "#f5eee5";
+    csvLink.style.border = "1px solid #d0bfae";
+    csvLink.style.borderRadius = "6px";
+    csvLink.style.textDecoration = "none";
+    csvLink.style.color = "#3e2f27";
+    csvLink.style.fontWeight = "600";
+    csvLink.style.fontSize = "0.9rem";
 
-    // Images
-    const imgTd = document.createElement("td");
-    imgTd.textContent = "Voir dans /images/" + e.username;
-    row.appendChild(imgTd);
+    if (!e.is_private) {
+      csvLink.href = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.target = "_blank";
+    } else {
+      csvLink.href = "#";
+      csvLink.onclick = async () => {
+        try {
+          const signedUrl = await getPrivateCsv(e.username, e.event_password, user.id);
+          window.open(signedUrl, "_blank");
+        } catch(err) {
+          alert("Erreur récupération CSV privé: "+err.message);
+        }
+      };
+    }
+    card.appendChild(csvLink);
 
     // Lien complet
-    const linkTd = document.createElement("td");
-    const linkA = document.createElement("a");
-    linkA.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
-    linkA.target = "_blank";
-    linkA.textContent = "Lien événement";
-    linkTd.appendChild(linkA);
-    row.appendChild(linkTd);
+    const link = document.createElement("a");
+    link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
+    link.textContent = "Lien événement";
+    link.style.display = "inline-block";
+    link.style.padding = "0.4rem 0.6rem";
+    link.style.background = "#f5eee5";
+    link.style.border = "1px solid #d0bfae";
+    link.style.borderRadius = "6px";
+    link.style.textDecoration = "none";
+    link.style.color = "#3e2f27";
+    link.style.fontWeight = "600";
+    link.style.fontSize = "0.9rem";
+    link.style.marginTop = "0.5rem";
+    link.target = "_blank";
+    card.appendChild(link);
 
-    eventsTableBody.appendChild(row);
+    container.appendChild(card);
   });
 }
 
 </script>
-
 </body>
 </html>
