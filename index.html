@@ -81,7 +81,7 @@
 </footer>
 
 <script type="module">
-import { supabase, getPrivateCsv } from './supabase.js';
+import { supabase, getPrivateCsv, getPrivateImages } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
@@ -153,7 +153,7 @@ login.onclick = async () => {
   else onLogin();
 };
 
-// Vérifie si un JSON public existe déjà
+// Vérifie si un pseudo est déjà utilisé
 async function checkPublicJsonExists(username) {
   const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
   if (error) return false;
@@ -195,11 +195,12 @@ sendBtn.onclick = async () => {
 
   let publicOrSignedUrl = null;
   if (!isPrivate) {
+    // Public → JSON pour tables.html
     const publicJsonName = `guests_${username}.json`;
     const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
     const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
     if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
+    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`; // lien CSV pour dashboard
   } else {
     try {
       const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
@@ -209,7 +210,7 @@ sendBtn.onclick = async () => {
     }
   }
 
-  // Enregistrer l’événement
+  // Enregistrer l’événement avec uploaded_at
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     event_password: isPrivate ? eventPassword : null,
@@ -227,14 +228,14 @@ sendBtn.onclick = async () => {
     if (imgErr) return alert("Erreur upload image: " + imgErr.message);
   }
 
-  // Afficher le lien
+  // Afficher le lien événement
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</strong> <br><code>Lien CSV : ${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
-  loadDashboard(); // actualiser le dashboard
+  loadDashboard(); // actualiser dashboard
 };
 
 // ---------------------------
@@ -279,19 +280,16 @@ async function loadDashboard() {
         csvLink = "Erreur récupération CSV privé";
       }
     } else if (!ev.is_private && ev.username) {
-      csvLink = `<a href="${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${ev.username}.json" target="_blank">Télécharger JSON public</a>`;
+      csvLink = `<a href="${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${ev.username}.csv" target="_blank">Télécharger CSV</a>`;
     }
 
     // Images
     let imageLinks = "—";
     if (ev.username) {
       try {
-        const { data: imagesList } = await supabase.storage.from("images").list(ev.username);
-        if (imagesList.length > 0) {
-          imageLinks = imagesList.map(img => {
-            const url = supabase.storage.from("images").getPublicUrl(`${ev.username}/${img.name}`).data.publicUrl;
-            return `<a href="${url}" target="_blank">${img.name}</a>`;
-          }).join("<br>");
+        const images = await getPrivateImages(ev.username, user.id);
+        if (images.length > 0) {
+          imageLinks = images.map(img => `<a href="${img.url}" target="_blank">${img.name}</a>`).join("<br>");
         }
       } catch(e) {
         imageLinks = "Erreur récupération images";
@@ -302,7 +300,6 @@ async function loadDashboard() {
 
     evDiv.innerHTML = `
       <strong>Pseudo public :</strong> ${ev.username || "—"}<br>
-      <strong>Nom affiché :</strong> ${ev.public_pseudo || "—"}<br>
       <strong>Date/heure upload :</strong> ${uploadedAt}<br>
       <strong>CSV :</strong> ${csvLink}<br>
       <strong>Images :</strong> ${imageLinks}<br>
@@ -311,7 +308,6 @@ async function loadDashboard() {
     dashboardContent.appendChild(evDiv);
   }
 }
-
 </script>
 
 </body>
