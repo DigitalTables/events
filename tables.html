@@ -33,20 +33,19 @@
 <input type="text" id="nameInput" list="names" placeholder="Commencez à écrire..." />
 <datalist id="names"></datalist>
 
-<!-- Résultat -->
 <div id="result" class="result">
   Commencez à taper votre nom pour voir votre table.
 </div>
 
 <script type="module">
-import { supabase, getPrivateCsv, getPrivateImages } from './supabase.js';
+import { supabase, getPrivateCsv, getEventImagesMapping } from './supabase.js';
 
 const resultEl = document.getElementById("result");
 const inputEl = document.getElementById("nameInput");
 const datalistEl = document.getElementById("names");
 const defaultMessage = "Merci pour votre présence avec nous !";
 let guests = [];
-let tableImagesUser = {};
+let imagesMapping = {};
 
 // Paramètre event dans l'URL
 const params = new URLSearchParams(window.location.search);
@@ -71,10 +70,8 @@ async function loadEvent(username) {
     return;
   }
 
-  console.log("📦 Données événement :", data);
-
-  // Charger les images uploadées par l'utilisateur
-  tableImagesUser = await getPrivateImages(username);
+  // Charger mapping images
+  imagesMapping = data.images_mapping || {};
 
   if (data.is_private) {
     const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
@@ -99,10 +96,11 @@ async function loadEvent(username) {
       resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
     }
   } else {
-    // Public : récupérer le CSV public pour download et JSON pour display
+    const csvUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
     try {
-      const csvUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
-      const csvText = await fetch(csvUrl).then(r => r.text());
+      const res = await fetch(csvUrl);
+      if (!res.ok) throw new Error("Impossible de charger le fichier CSV public.");
+      const csvText = await res.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
       guests = parsed.data;
       fillDatalist();
@@ -135,8 +133,11 @@ function fillDatalist() {
 function showGuest(guest) {
   const message = guest.message || defaultMessage;
   let html = `<span style="color: inherit;">${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
-  const img = tableImagesUser[guest.table];
-  if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
+  const imgPath = imagesMapping[guest.table];
+  if (imgPath) {
+    const imgUrl = `${supabase.supabaseUrl}/storage/v1/object/public/images/${imgPath}`;
+    html += `<br><img src="${imgUrl}" alt="Image de la table ${guest.table}">`;
+  }
   resultEl.innerHTML = html;
 }
 
@@ -175,6 +176,5 @@ resultEl.addEventListener("click", e => {
   }
 });
 </script>
-
 </body>
 </html>
