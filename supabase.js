@@ -1,4 +1,3 @@
-// supabase.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 
 const supabaseUrl = "https://xrffjwulhrydrhlvuhlj.supabase.co";
@@ -6,7 +5,13 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Récupérer CSV privé via Edge Function
+/**
+ * Récupère le CSV privé signé via Edge Function
+ * @param {string} username 
+ * @param {string} password 
+ * @param {string} userId 
+ * @returns {Promise<string>} URL signée
+ */
 export async function getPrivateCsv(username, password, userId) {
   const res = await fetch(`${supabaseUrl}/functions/v1/get-private-csv`, {
     method: "POST",
@@ -14,37 +19,26 @@ export async function getPrivateCsv(username, password, userId) {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${supabaseAnonKey}`
     },
-    body: JSON.stringify({ path: `guests_${username}.csv` })
+    body: JSON.stringify({ path: `guests_${username}.csv`, password, userId })
   });
+
   const data = await res.json();
   if (!res.ok || !data?.signedUrl) throw new Error(data.error || "Erreur CSV privé");
   return data.signedUrl;
 }
 
-// Récupérer toutes les images avec signed URL
-export async function getPrivateImages(username) {
-  const { data: imagesList, error } = await supabase.storage.from("images").list(`${username}/tables`);
-  if (error || !imagesList) return {};
-  
-  const mapping = {};
-  for (const img of imagesList) {
-    const tableName = img.name.split("_")[0]; // nom de la table avant "_"
-    const { data: urlData } = await supabase.storage
-      .from("images")
-      .createSignedUrl(`${username}/tables/${img.name}`, 60*60);
-    mapping[tableName] = urlData.signedUrl;
-  }
-  return mapping;
-}
+/**
+ * Récupère le mapping images → tables pour un événement
+ * @param {string} username 
+ * @returns {Promise<Object>} mapping { "Nom Table": "path/image.jpg" }
+ */
+export async function getEventImagesMapping(username) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("images_mapping")
+    .eq("username", username)
+    .single();
 
-// Vérifier si pseudo déjà utilisé
-export async function checkPublicJsonExists(username) {
-  try {
-    const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
-    if (error) return false;
-    return data.some(f => f.name === `guests_${username}.json`);
-  } catch(e) {
-    console.error("checkPublicJsonExists error:", e);
-    return false;
-  }
+  if (error) throw error;
+  return data?.images_mapping || {};
 }
