@@ -7,10 +7,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Récupère le CSV privé signé via Edge Function
- * @param {string} username 
- * @param {string} password 
- * @param {string} userId 
- * @returns {Promise<string>} URL signée
  */
 export async function getPrivateCsv(username, password, userId) {
   const res = await fetch(`${supabaseUrl}/functions/v1/get-private-csv`, {
@@ -29,8 +25,6 @@ export async function getPrivateCsv(username, password, userId) {
 
 /**
  * Récupère le mapping images → tables pour un événement
- * @param {string} username 
- * @returns {Promise<Object>} mapping { "Nom Table": "path/image.jpg" }
  */
 export async function getEventImagesMapping(username) {
   const { data, error } = await supabase
@@ -41,4 +35,18 @@ export async function getEventImagesMapping(username) {
 
   if (error) throw error;
   return data?.images_mapping || {};
+}
+
+/**
+ * Récupère tous les événements de l'utilisateur pour le dashboard
+ */
+export async function getUserEvents(userId) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", userId)
+    .order("uploaded_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
 }
