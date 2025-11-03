@@ -1,30 +1,45 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Placement des invités</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<style>
-body { background: radial-gradient(ellipse at center, #fffdfb 0%, #f5eee5 100%); font-family: "Quicksand", sans-serif; text-align: center; padding: 2em; color: #3e2f27; }
-h1,h2 { font-family: "Playfair Display", serif; color: #2e1f17; }
-input { width: 300px; padding: 10px; font-size: 16px; }
-.result { margin-top: 20px; font-size: 18px; background-color: rgba(255,255,255,0.6); padding: 1em; border-radius: 8px; }
-.match-btn { background: #f5eee5; border: 1px solid #d0bfae; border-radius: 25px; padding: 10px 18px; margin: 6px; cursor: pointer; }
-img { max-width: 300px; margin-top: 1em; border-radius: 8px; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Placement des invités</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body {
+      background: radial-gradient(ellipse at center, #fffdfb 0%, #f5eee5 100%);
+      font-family: "Quicksand", sans-serif;
+      text-align: center;
+      padding: 2em;
+      color: #3e2f27;
+    }
+    h1, h2 { font-family: "Playfair Display", serif; color: #2e1f17; }
+    input { width: 300px; padding: 10px; font-size: 16px; }
+    .result { margin-top: 20px; font-size: 18px; background-color: rgba(255,255,255,0.6); padding: 1em; border-radius: 8px; }
+    .match-btn { background: #f5eee5; border: 1px solid #d0bfae; border-radius: 25px; padding: 10px 18px; margin: 6px; cursor: pointer; }
+    .logo-container img { max-width: 200px; margin-bottom: 1em; }
+    img { max-width: 300px; margin-top: 1em; border-radius: 8px; }
+  </style>
 </head>
 <body>
 
+<div class="logo-container">
+  <img src="./images/Logo.jpg" alt="Logo DigitalTables" class="logo-image">
+</div>
 <h1>Bienvenue à votre événement</h1>
 <h2>Recherchez votre table</h2>
 <p>Entrez votre nom pour connaître votre table</p>
+
 <input type="text" id="nameInput" list="names" placeholder="Commencez à écrire..." />
 <datalist id="names"></datalist>
-<div id="result" class="result">Commencez à taper votre nom pour voir votre table.</div>
+
+<div id="result" class="result">
+  Commencez à taper votre nom pour voir votre table.
+</div>
 
 <script type="module">
-import { supabase, getPrivateCsv } from './supabase.js';
+import { supabase, getPrivateCsv, getEventImagesMapping } from './supabase.js';
+
 const resultEl = document.getElementById("result");
 const inputEl = document.getElementById("nameInput");
 const datalistEl = document.getElementById("names");
@@ -32,74 +47,134 @@ const defaultMessage = "Merci pour votre présence avec nous !";
 let guests = [];
 let imagesMapping = {};
 
+// Paramètre event dans l'URL
 const params = new URLSearchParams(window.location.search);
 const eventUsername = params.get("event");
 
-if (!eventUsername) resultEl.textContent = "Aucun identifiant d’événement fourni dans l’URL.";
-else loadEvent(eventUsername);
+if (!eventUsername) {
+  resultEl.textContent = "Aucun identifiant d’événement fourni dans l’URL.";
+} else {
+  loadEvent(eventUsername);
+}
 
 async function loadEvent(username) {
-  const { data, error } = await supabase.from("events").select("*").eq("username", username).single();
-  if (error || !data) return resultEl.textContent = "❌ Événement introuvable.";
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("username", username)
+    .single();
 
+  if (error || !data) {
+    resultEl.textContent = "❌ Événement introuvable.";
+    console.error(error);
+    return;
+  }
+
+  // Charger mapping images
   imagesMapping = data.images_mapping || {};
 
   if (data.is_private) {
     const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
-    if (!pwd || pwd !== data.event_password) return resultEl.textContent = "❌ Mot de passe incorrect.";
+    if (!pwd || pwd !== data.event_password) {
+      resultEl.textContent = "❌ Mot de passe incorrect.";
+      return;
+    }
+
     try {
       const session = await supabase.auth.getSession();
       const userId = session.data.session?.user.id;
       if (!userId) throw new Error("Utilisateur non connecté");
+
       const signedUrl = await getPrivateCsv(username, pwd, userId);
       const csvText = await fetch(signedUrl).then(r => r.text());
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
       guests = parsed.data;
       fillDatalist();
-    } catch(e) { console.error(e); resultEl.textContent = "Erreur chargement CSV privé : " + e.message; }
+      console.log("✅ Invités chargés (CSV privé) :", guests.length);
+    } catch(e) {
+      console.error(e);
+      resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
+    }
   } else {
-    const jsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+    const csvUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
     try {
-      const res = await fetch(jsonUrl);
-      if (!res.ok) throw new Error("Impossible de charger le fichier JSON public.");
-      guests = await res.json();
+      const res = await fetch(csvUrl);
+      if (!res.ok) throw new Error("Impossible de charger le fichier CSV public.");
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      guests = parsed.data;
       fillDatalist();
-    } catch(e) { console.error(e); resultEl.textContent = "Erreur chargement JSON public : " + e.message; }
+      console.log("✅ Invités chargés (CSV public) :", guests.length);
+    } catch(e) {
+      console.error(e);
+      resultEl.textContent = "Erreur chargement CSV public : " + e.message;
+    }
   }
 }
 
-function normalize(str) { return String(str||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim(); }
-function fillDatalist() { datalistEl.innerHTML=""; guests.forEach(g=>{ const opt=document.createElement("option"); opt.value=g.name; datalistEl.appendChild(opt); }); }
+function normalize(str) {
+  return String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fillDatalist() {
+  datalistEl.innerHTML = "";
+  guests.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g.name;
+    datalistEl.appendChild(opt);
+  });
+}
 
 function showGuest(guest) {
-  let html = `<span style="color: inherit;">${guest.message||defaultMessage}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
-  const imgFile = imagesMapping[guest.table];
-  if(imgFile) html += `<br><img src="${supabase.supabaseUrl}/storage/v1/object/public/images/${encodeURIComponent(imgFile)}" alt="Image de la table ${guest.table}">`;
+  const message = guest.message || defaultMessage;
+  let html = `<span style="color: inherit;">${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
+  const imgPath = imagesMapping[guest.table];
+  if (imgPath) {
+    const imgUrl = `${supabase.supabaseUrl}/storage/v1/object/public/images/${imgPath}`;
+    html += `<br><img src="${imgUrl}" alt="Image de la table ${guest.table}">`;
+  }
   resultEl.innerHTML = html;
 }
 
-function showNoMatch(input) { resultEl.textContent = `Aucun invité reconnu pour "${input}".`; }
-function showMultiple(matches) { const items = matches.slice(0,8).map(m=>`<button type="button" class="match-btn" data-name="${m.name}">${m.name}</button>`).join(""); resultEl.innerHTML=`<div>Plusieurs correspondances :<br>${items}</div>`; }
+function showNoMatch(input) {
+  resultEl.textContent = `Aucun invité reconnu pour "${input}".`;
+}
+
+function showMultiple(matches) {
+  const items = matches.slice(0, 8)
+    .map(m => `<button type="button" class="match-btn" data-name="${m.name}">${m.name}</button>`)
+    .join("");
+  resultEl.innerHTML = `<div>Plusieurs correspondances :<br>${items}</div>`;
+}
 
 function searchAndDisplay(input) {
-  if(!input || input.trim()==="") { resultEl.textContent="Commencez à taper votre nom pour voir votre table."; return; }
-  const n=normalize(input);
-  let matches=guests.filter(g=>normalize(g.name)===n);
-  if(matches.length===1) return showGuest(matches[0]);
-  matches=guests.filter(g=>normalize(g.name).startsWith(n));
-  if(matches.length>=1) return showMultiple(matches);
-  matches=guests.filter(g=>normalize(g.name).includes(n));
-  if(matches.length>=1) return showMultiple(matches);
+  if (!input || input.trim() === "") { resultEl.textContent = "Commencez à taper votre nom pour voir votre table."; return; }
+  const n = normalize(input);
+  let matches = guests.filter(g => normalize(g.name) === n);
+  if (matches.length === 1) return showGuest(matches[0]);
+  matches = guests.filter(g => normalize(g.name).startsWith(n));
+  if (matches.length >= 1) return showMultiple(matches);
+  matches = guests.filter(g => normalize(g.name).includes(n));
+  if (matches.length >= 1) return showMultiple(matches);
   showNoMatch(input);
 }
 
-inputEl.addEventListener("input",e=>searchAndDisplay(e.target.value));
-inputEl.addEventListener("change",e=>searchAndDisplay(e.target.value));
-resultEl.addEventListener("click",e=>{
-  const name=e.target.dataset?.name;
-  if(name){ inputEl.value=name; const guest=guests.find(g=>normalize(g.name)===normalize(name)); if(guest) showGuest(guest); }
+inputEl.addEventListener("input", e => searchAndDisplay(e.target.value));
+inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
+
+resultEl.addEventListener("click", e => {
+  const name = e.target.dataset?.name;
+  if (name) {
+    inputEl.value = name;
+    const guest = guests.find(g => normalize(g.name) === normalize(name));
+    if (guest) showGuest(guest);
+  }
 });
 </script>
-
 </body>
 </html>
