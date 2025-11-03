@@ -68,6 +68,12 @@
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
 </div>
 
+<!-- Dashboard utilisateur -->
+<div id="dashboard" style="display:none; margin-top:2rem;">
+  <h3>Mon Tableau de Bord</h3>
+  <div id="dashboardContent"></div>
+</div>
+
 <footer>
   <div class="container">
     <p>© 2025 DigitalTables. Tous droits réservés.</p>
@@ -80,6 +86,8 @@ import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
+const dashboardDiv = document.getElementById("dashboard");
+const dashboardContent = document.getElementById("dashboardContent");
 const logoutBtn = document.getElementById("logout");
 const email = document.getElementById("email");
 const password = document.getElementById("password");
@@ -105,10 +113,12 @@ function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
+  loadDashboard();
 }
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
+  dashboardDiv.style.display = "none";
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
 }
@@ -128,15 +138,12 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification simplifiée sans mail de confirmation
+// Authentification simplifiée
 signup.onclick = async () => {
   const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
   if (error) return alert("Erreur : " + error.message);
-
-  // Connexion directe après inscription
   const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
   if (loginError) return alert("Erreur login : " + loginError.message);
-
   onLogin();
   alert("✅ Compte créé et connecté !");
 };
@@ -208,7 +215,8 @@ sendBtn.onclick = async () => {
     event_password: isPrivate ? eventPassword : null,
     signed_url: publicOrSignedUrl,
     is_private: isPrivate,
-    user_id: user.id
+    user_id: user.id,
+    uploaded_at: new Date().toISOString()
   }, { onConflict: "username" });
   if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
 
@@ -226,7 +234,84 @@ sendBtn.onclick = async () => {
     : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
+  loadDashboard(); // actualiser le dashboard
 };
+
+// ---------------------------
+// DASHBOARD UTILISATEUR
+// ---------------------------
+async function loadDashboard() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
+
+  const { data: events, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("uploaded_at", { ascending: false });
+
+  if (error) return dashboardContent.textContent = "Erreur chargement tableau de bord : " + error.message;
+  if (!events || events.length === 0) {
+    dashboardContent.textContent = "Vous n'avez encore uploadé aucun événement.";
+    return;
+  }
+
+  dashboardDiv.style.display = "block";
+  dashboardContent.innerHTML = "";
+
+  for (const ev of events) {
+    const evDiv = document.createElement("div");
+    evDiv.style.border = "1px solid #d0bfae";
+    evDiv.style.padding = "1rem";
+    evDiv.style.borderRadius = "8px";
+    evDiv.style.marginBottom = "1rem";
+
+    const uploadedAt = ev.uploaded_at ? new Date(ev.uploaded_at).toLocaleString() : "—";
+
+    // CSV
+    let csvLink = "—";
+    if (ev.is_private && ev.username) {
+      try {
+        const signedUrl = await getPrivateCsv(ev.username, ev.event_password, user.id);
+        csvLink = `<a href="${signedUrl}" target="_blank">Télécharger CSV privé</a>`;
+      } catch(e) {
+        csvLink = "Erreur récupération CSV privé";
+      }
+    } else if (!ev.is_private && ev.username) {
+      csvLink = `<a href="${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${ev.username}.json" target="_blank">Télécharger JSON public</a>`;
+    }
+
+    // Images
+    let imageLinks = "—";
+    if (ev.username) {
+      try {
+        const { data: imagesList } = await supabase.storage.from("images").list(ev.username);
+        if (imagesList.length > 0) {
+          imageLinks = imagesList.map(img => {
+            const url = supabase.storage.from("images").getPublicUrl(`${ev.username}/${img.name}`).data.publicUrl;
+            return `<a href="${url}" target="_blank">${img.name}</a>`;
+          }).join("<br>");
+        }
+      } catch(e) {
+        imageLinks = "Erreur récupération images";
+      }
+    }
+
+    const publicLink = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(ev.username)}`;
+
+    evDiv.innerHTML = `
+      <strong>Pseudo public :</strong> ${ev.username || "—"}<br>
+      <strong>Nom affiché :</strong> ${ev.public_pseudo || "—"}<br>
+      <strong>Date/heure upload :</strong> ${uploadedAt}<br>
+      <strong>CSV :</strong> ${csvLink}<br>
+      <strong>Images :</strong> ${imageLinks}<br>
+      <strong>Lien de l'événement :</strong> <a href="${publicLink}" target="_blank">${publicLink}</a>
+    `;
+    dashboardContent.appendChild(evDiv);
+  }
+}
+
 </script>
 
 </body>
