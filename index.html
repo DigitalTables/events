@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DigitalTables – Gestion des tables invités</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; background: #fffdfb; }
+    th, td { border: 1px solid #d0bfae; padding: 8px; text-align: center; }
+    th { background: #f5eee5; }
+    a { color: #2e1f17; text-decoration: none; font-weight: bold; }
+    a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
 
@@ -37,7 +44,7 @@
   <button id="login">Se connecter</button>
 </div>
 
-<!-- Section Upload -->
+<!-- Section Upload + Dashboard -->
 <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
   <div style="margin-bottom:1rem;">
     <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
@@ -60,25 +67,26 @@
     <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
   </div>
 
-  <h3>Uploader ton CSV et tes images</h3>
+  <h3>Uploader CSV et images pour vos tables</h3>
   <input type="file" id="guests" accept=".csv" /><br><br>
-
-  <div id="tablesImagesContainer">
-    <p>Associez vos images aux tables :</p>
-    <div id="tableImageRows"></div>
-    <button id="addTableImageRow">Ajouter une table/image</button>
-  </div>
-
-  <br>
+  <input type="file" id="images" accept="image/*" multiple /><br><br>
   <button id="send">Envoyer</button>
 
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
-</div>
 
-<!-- Section Dashboard -->
-<div id="dashboard" style="display:none; margin-top:3rem; padding: 0 2rem;">
-  <h3 style="text-align:center; margin-bottom:1rem;">Vos événements</h3>
-  <div id="eventsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;"></div>
+  <h3 style="margin-top:2rem;">Dashboard de vos événements</h3>
+  <table id="dashboard">
+    <thead>
+      <tr>
+        <th>Pseudo</th>
+        <th>Privé / Public</th>
+        <th>Date / Heure</th>
+        <th>Lien complet</th>
+        <th>CSV</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <footer>
@@ -88,7 +96,7 @@
 </footer>
 
 <script type="module">
-import { supabase, getPrivateCsv } from './supabase.js';
+import { supabase, getPrivateCsv, getEventImagesMapping, getUserEvents } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
@@ -100,15 +108,14 @@ const signup = document.getElementById("signup");
 const login = document.getElementById("login");
 const sendBtn = document.getElementById("send");
 const csvInput = document.getElementById("guests");
+const imagesInput = document.getElementById("images");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
-
-const tableImageRows = document.getElementById("tableImageRows");
-const addTableImageRowBtn = document.getElementById("addTableImageRow");
+const dashboardTbody = document.querySelector("#dashboard tbody");
 
 // Toggle mot de passe si privé
 privateCsvCheckbox.addEventListener("change", () => {
@@ -120,15 +127,14 @@ function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
-  dashboardDiv.style.display = "block";
-  loadUserUploads();
+  loadDashboard();
 }
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
   logoutBtn.style.display = "none";
   publicUrlDiv.textContent = "";
-  dashboardDiv.style.display = "none";
+  dashboardTbody.innerHTML = "";
 }
 
 logoutBtn.onclick = async () => {
@@ -146,12 +152,14 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification simplifiée
+// Auth simplifiée
 signup.onclick = async () => {
   const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
   if (error) return alert("Erreur : " + error.message);
+
   const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
   if (loginError) return alert("Erreur login : " + loginError.message);
+
   onLogin();
   alert("✅ Compte créé et connecté !");
 };
@@ -161,34 +169,40 @@ login.onclick = async () => {
   else onLogin();
 };
 
-// Vérifie si un pseudo est déjà utilisé
-async function checkPublicJsonExists(username) {
-  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
-  if (error) return false;
-  return data.some(f => f.name === `guests_${username}.json`);
-}
+// Dashboard
+async function loadDashboard() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
 
-usernameInput.addEventListener("blur", async () => {
-  const username = usernameInput.value.trim();
-  if (!username) { usernameStatus.textContent = ""; return; }
-  const exists = await checkPublicJsonExists(username);
-  usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé" : "✅ Disponible";
-  usernameStatus.style.color = exists ? "red" : "green";
-});
+  try {
+    const events = await getUserEvents(user.id);
+    dashboardTbody.innerHTML = "";
+    for (const ev of events) {
+      const isPrivate = ev.is_private;
+      const url = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(ev.username)}`;
+      let csvLink = "#";
+      if (isPrivate) {
+        csvLink = await getPrivateCsv(ev.username, ev.event_password, user.id);
+      } else {
+        csvLink = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${ev.username}.csv`;
+      }
 
-// Gestion des lignes table → image
-function addTableImageRow() {
-  const div = document.createElement("div");
-  div.style.marginBottom = "0.5rem";
-  div.innerHTML = `
-    <input type="text" placeholder="Nom de la table" style="width: 200px; margin-right:0.5rem;" />
-    <input type="file" accept="image/*" />
-    <button type="button" class="removeRow">❌</button>
-  `;
-  div.querySelector(".removeRow").onclick = () => div.remove();
-  tableImageRows.appendChild(div);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${ev.username}</td>
+        <td>${isPrivate ? "Privé" : "Public"}</td>
+        <td>${new Date(ev.uploaded_at).toLocaleString()}</td>
+        <td><a href="${url}" target="_blank">${url}</a></td>
+        <td><a href="${csvLink}" target="_blank">Télécharger CSV</a></td>
+      `;
+      dashboardTbody.appendChild(tr);
+    }
+  } catch(e) {
+    console.error(e);
+    alert("Erreur chargement dashboard : " + e.message);
+  }
 }
-addTableImageRowBtn.addEventListener("click", addTableImageRow);
 
 // Upload CSV et images
 sendBtn.onclick = async () => {
@@ -205,165 +219,61 @@ sendBtn.onclick = async () => {
 
   const csvFile = csvInput.files[0];
   if (!csvFile) return alert("❌ Choisis un fichier CSV.");
-  const text = await csvFile.text();
-  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-  const rows = parsed.data;
+  const csvText = await csvFile.text();
+  const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
 
-  // Upload CSV
+  // Upload CSV dans guests (privé)
   const csvPath = `guests_${username}.csv`;
-  const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
+  const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([csvText], { type: "text/csv" }), { upsert: true });
   if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
 
-  // Images mapping
+  // Mapping images
+  const imgs = imagesInput.files;
   const imagesMapping = {};
-  const tableImageDivs = tableImageRows.querySelectorAll("div");
-  for (const div of tableImageDivs) {
-    const tableName = div.querySelector("input[type='text']").value.trim();
-    const imgFile = div.querySelector("input[type='file']").files[0];
-    if (!tableName || !imgFile) continue;
-
-    const safeFileName = imgFile.name
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, "_");
-
-    const imgPath = `${username}/tables/${safeFileName}`;
-    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
+  for (const img of imgs) {
+    const safeName = img.name.replace(/[^a-z0-9\-_\.]/gi, "_");
+    imagesMapping[img.name.split(".")[0]] = safeName;
+    const { error: imgErr } = await supabase.storage.from("images").upload(`${username}/${safeName}`, img, { upsert: true });
     if (imgErr) return alert("Erreur upload image: " + imgErr.message);
-
-    imagesMapping[tableName] = imgPath;
   }
 
-  // Upload public JSON si nécessaire
+  // URL événement
   let publicOrSignedUrl = null;
   if (!isPrivate) {
-    const publicJsonName = `guests_${username}.json`;
-    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
-    if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
+    const jsonBlob = new Blob([JSON.stringify(parsed.data, null, 2)], { type: "application/json" });
+    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(`guests_${username}.json`, jsonBlob, { upsert: true });
+    if (jsonUpErr) return alert("Erreur upload JSON public: " + jsonUpErr.message);
+    publicOrSignedUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
   } else {
     try {
-      const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
-      publicOrSignedUrl = signedUrl;
+      publicOrSignedUrl = await getPrivateCsv(username, eventPassword, user.id);
     } catch(e) {
-      return alert("Erreur génération URL signée pour le CSV privé: " + e.message);
+      return alert("Erreur génération URL signée pour CSV privé: " + e.message);
     }
   }
 
-  // Enregistrer l’événement + mapping images
+  // Upsert événement
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     event_password: isPrivate ? eventPassword : null,
     signed_url: publicOrSignedUrl,
     is_private: isPrivate,
     user_id: user.id,
-    uploaded_at: new Date(),
+    uploaded_at: new Date().toISOString(),
     images_mapping: imagesMapping
   }, { onConflict: "username" });
   if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
 
-  // Afficher le lien
+  // Afficher lien
   const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
   publicUrlDiv.innerHTML = isPrivate
     ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</strong> <br><code>${publicOrSignedUrl}</code>`;
 
   alert("✅ Upload terminé !");
-  loadUserUploads();
+  loadDashboard();
 };
-
-// Dashboard
-const dashboardDiv = document.getElementById("dashboard");
-async function loadUserUploads() {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return;
-
-  const { data: events } = await supabase
-    .from("events")
-    .select("*")
-    .eq("user_id", user.id)
-    .order('uploaded_at', { ascending: false });
-
-  const container = document.getElementById("eventsContainer");
-  container.innerHTML = "";
-  if (!events || events.length === 0) {
-    container.textContent = "Vous n'avez aucun événement pour l'instant.";
-    return;
-  }
-
-  events.forEach(e => {
-    const card = document.createElement("div");
-    card.style.background = "rgba(255,255,255,0.8)";
-    card.style.borderRadius = "12px";
-    card.style.padding = "1rem";
-    card.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
-    card.style.display = "flex";
-    card.style.flexDirection = "column";
-    card.style.gap = "0.5rem";
-
-    const title = document.createElement("h4");
-    title.textContent = e.username;
-    title.style.margin = "0";
-    title.style.fontFamily = "'Playfair Display', serif";
-    title.style.color = "#2e1f17";
-    card.appendChild(title);
-
-    const date = document.createElement("div");
-    date.textContent = "📅 " + new Date(e.uploaded_at).toLocaleString();
-    date.style.fontSize = "0.9rem";
-    card.appendChild(date);
-
-    // CSV
-    const csvLink = document.createElement("a");
-    csvLink.textContent = "Télécharger CSV";
-    csvLink.style.display = "inline-block";
-    csvLink.style.padding = "0.4rem 0.6rem";
-    csvLink.style.background = "#f5eee5";
-    csvLink.style.border = "1px solid #d0bfae";
-    csvLink.style.borderRadius = "6px";
-    csvLink.style.textDecoration = "none";
-    csvLink.style.color = "#3e2f27";
-    csvLink.style.fontWeight = "600";
-    csvLink.style.fontSize = "0.9rem";
-
-    if (!e.is_private) {
-      csvLink.href = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
-      csvLink.target = "_blank";
-    } else {
-      csvLink.href = "#";
-      csvLink.onclick = async () => {
-        try {
-          const signedUrl = await getPrivateCsv(e.username, e.event_password, user.id);
-          window.open(signedUrl, "_blank");
-        } catch(err) {
-          alert("Erreur récupération CSV privé: "+err.message);
-        }
-      };
-    }
-    card.appendChild(csvLink);
-
-    // Lien complet
-    const link = document.createElement("a");
-    link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
-    link.textContent = "Lien événement";
-    link.style.display = "inline-block";
-    link.style.padding = "0.4rem 0.6rem";
-    link.style.background = "#f5eee5";
-    link.style.border = "1px solid #d0bfae";
-    link.style.borderRadius = "6px";
-    link.style.textDecoration = "none";
-    link.style.color = "#3e2f27";
-    link.style.fontWeight = "600";
-    link.style.fontSize = "0.9rem";
-    link.style.marginTop = "0.5rem";
-    link.target = "_blank";
-    card.appendChild(link);
-
-    container.appendChild(card);
-  });
-}
-
 </script>
+
 </body>
 </html>
