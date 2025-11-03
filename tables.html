@@ -39,13 +39,14 @@
 </div>
 
 <script type="module">
-import { supabase, getPrivateCsv } from './supabase.js';
+import { supabase, getPrivateCsv, getPrivateImages } from './supabase.js';
 
 const resultEl = document.getElementById("result");
 const inputEl = document.getElementById("nameInput");
 const datalistEl = document.getElementById("names");
 const defaultMessage = "Merci pour votre présence avec nous !";
 let guests = [];
+let tableImagesUser = {};
 
 // Paramètre event dans l'URL
 const params = new URLSearchParams(window.location.search);
@@ -70,6 +71,11 @@ async function loadEvent(username) {
     return;
   }
 
+  console.log("📦 Données événement :", data);
+
+  // Charger les images uploadées par l'utilisateur
+  tableImagesUser = await getPrivateImages(username);
+
   if (data.is_private) {
     const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
     if (!pwd || pwd !== data.event_password) {
@@ -82,7 +88,6 @@ async function loadEvent(username) {
       const userId = session.data.session?.user.id;
       if (!userId) throw new Error("Utilisateur non connecté");
 
-      // Récupérer CSV privé via Edge Function
       const signedUrl = await getPrivateCsv(username, pwd, userId);
       const csvText = await fetch(signedUrl).then(r => r.text());
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
@@ -94,17 +99,17 @@ async function loadEvent(username) {
       resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
     }
   } else {
-    // Public : récupérer JSON
-    const jsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+    // Public : récupérer le CSV public pour download et JSON pour display
     try {
-      const res = await fetch(jsonUrl);
-      if (!res.ok) throw new Error("Impossible de charger le fichier public.");
-      guests = await res.json();
+      const csvUrl = `${supabase.supabaseUrl}/storage/v1/object/public/guests/guests_${username}.csv`;
+      const csvText = await fetch(csvUrl).then(r => r.text());
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      guests = parsed.data;
       fillDatalist();
-      console.log("✅ Invités chargés (JSON public) :", guests.length);
+      console.log("✅ Invités chargés (CSV public) :", guests.length);
     } catch(e) {
       console.error(e);
-      resultEl.textContent = "Erreur chargement JSON public : " + e.message;
+      resultEl.textContent = "Erreur chargement CSV public : " + e.message;
     }
   }
 }
@@ -127,28 +132,10 @@ function fillDatalist() {
   });
 }
 
-// Images associées aux tables
-const tableImages = {
-  "Whale sharks - Nabire": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Requinsbaleine.jpeg",
-  "Machu Picchu - Perú": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/MachuPicchu.jpeg",
-  "Isle of Skye - Scotland": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Scotland.jpeg",
-  "Piton des Neiges - La Réunion": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Reunion.jpeg",
-  "Komodo Dragons - Indonesia": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Komodo.jpeg",
-  "Backside Mont Fort - Verbier": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Montfort.jpeg",
-  "Heliski Château des Dames - Cervinia": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Heliski.jpeg",
-  "Halong Bay Cruise - Vietnam": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Halongbay.jpeg",
-  "Hammerhead Sharks - Galapagos": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Galapagos.jpeg",
-  "Mitad del mundo - Ecuador": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Mitaddelmundo.jpeg",
-  "3 of Us - Mauritius": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Maurice.jpeg",
-  "Colle dell'Arietta - Valle Soana": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Arietta.jpeg",
-  "Niseko Powder - Japan": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Niseko.jpeg",
-  "La Demande - Santorini": "https://raw.githubusercontent.com/willisandlionel/tables/main/images/Santorini.jpeg"
-};
-
 function showGuest(guest) {
   const message = guest.message || defaultMessage;
   let html = `<span style="color: inherit;">${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
-  const img = tableImages[guest.table];
+  const img = tableImagesUser[guest.table];
   if (img) html += `<br><img src="${img}" alt="Image de la table ${guest.table}">`;
   resultEl.innerHTML = html;
 }
