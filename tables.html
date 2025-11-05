@@ -135,7 +135,7 @@ function showGuest(guest) {
   let html = `<span style="color: inherit;">${message}<br><br><strong>Votre table est :</strong> ${guest.table}</span>`;
   const imgPath = imagesMapping[guest.table];
   if (imgPath) {
-    const imgUrl = `${supabase.supabaseUrl}/storage/v1/object/public/${imgPath}`;
+    const imgUrl = `${supabase.supabaseUrl}/storage/v1/object/public/images/${imgPath}`;
     html += `<br><img src="${imgUrl}" alt="Image de la table ${guest.table}">`;
   }
   resultEl.innerHTML = html;
