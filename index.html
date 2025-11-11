@@ -60,8 +60,15 @@
     <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
   </div>
 
-  <h3>Uploader ton CSV et tes images</h3>
-  <input type="file" id="guests" accept=".csv" /><br><br>
+  <h3>Invités – Choisis ta méthode</h3>
+
+<div id="uploadChoice" style="margin-bottom:1.5rem;">
+  <button id="createSheetBtn" style="background:#f0f0ff;border:1px solid #ccc;padding:8px 14px;border-radius:8px;cursor:pointer;">
+    📄 Créer automatiquement une Google Sheet
+  </button>
+  <span style="margin:0 1rem;">ou</span>
+  <input type="file" id="guests" accept=".csv" />
+</div>
 
   <div id="tablesImagesContainer">
     <p>Associez vos images aux tables :</p>
@@ -214,6 +221,63 @@ sendBtn.onclick = async () => {
   const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
   if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
 
+  // --- Création automatique de Google Sheet ---
+const createSheetBtn = document.getElementById("createSheetBtn");
+
+createSheetBtn.addEventListener("click", async () => {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("❌ Tu dois être connecté pour créer une Google Sheet.");
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("❌ Choisis un identifiant d'événement.");
+
+  const isPrivate = privateCsvCheckbox.checked;
+  const eventPassword = eventPasswordInput.value.trim();
+  if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour un événement privé.");
+
+  if (!confirm("Créer une Google Sheet pré-remplie pour ton événement ?")) return;
+
+  // Récupère le token Supabase
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+
+  try {
+    const res = await fetch(`${supabase.supabaseUrl}/functions/v1/create-google-sheet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        username,
+        isPrivate,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.sheetUrl) throw new Error(data.error || "Erreur création Google Sheet");
+
+    // Sauvegarde du mot de passe éventuel (RGPD)
+    if (isPrivate) {
+      await supabase.from("events").update({ event_password: eventPassword }).eq("username", username);
+    }
+
+    // Affiche le lien dans la zone d'information (publicUrlDiv existant)
+    publicUrlDiv.innerHTML = isPrivate
+      ? `🔒 Google Sheet privée créée :<br><a href="${data.sheetUrl}" target="_blank">${data.sheetUrl}</a>`
+      : `🌍 Google Sheet publique créée :<br><a href="${data.sheetUrl}" target="_blank">${data.sheetUrl}</a>`;
+
+    alert("✅ Google Sheet créée avec succès !");
+    loadUserUploads(); // met à jour le dashboard
+  } catch (err) {
+    console.error(err);
+    alert("❌ Erreur lors de la création de la Google Sheet : " + err.message);
+  }
+});
+
+
   // Images mapping
   const imagesMapping = {};
   const tableImageDivs = tableImageRows.querySelectorAll("div");
@@ -344,25 +408,38 @@ async function loadUserUploads() {
     card.appendChild(csvLink);
 
     // Lien complet
-    const link = document.createElement("a");
-    link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
-    link.textContent = "Lien événement";
-    link.style.display = "inline-block";
-    link.style.padding = "0.4rem 0.6rem";
-    link.style.background = "#f5eee5";
-    link.style.border = "1px solid #d0bfae";
-    link.style.borderRadius = "6px";
-    link.style.textDecoration = "none";
-    link.style.color = "#3e2f27";
-    link.style.fontWeight = "600";
-    link.style.fontSize = "0.9rem";
-    link.style.marginTop = "0.5rem";
-    link.target = "_blank";
-    card.appendChild(link);
+const link = document.createElement("a");
+link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
+link.textContent = "Lien événement";
+link.style.display = "inline-block";
+link.style.padding = "0.4rem 0.6rem";
+link.style.background = "#f5eee5";
+link.style.border = "1px solid #d0bfae";
+link.style.borderRadius = "6px";
+link.style.textDecoration = "none";
+link.style.color = "#3e2f27";
+link.style.fontWeight = "600";
+link.style.fontSize = "0.9rem";
+link.style.marginTop = "0.5rem";
+link.target = "_blank";
+card.appendChild(link);
 
-    container.appendChild(card);
-  });
+// ✅ Lien Google Sheet (si disponible)
+if (e.google_sheet_url) {
+  const sheetLink = document.createElement("a");
+  sheetLink.href = e.google_sheet_url;
+  sheetLink.target = "_blank";
+  sheetLink.textContent = "📄 Ouvrir Google Sheet";
+  sheetLink.style.display = "block";
+  sheetLink.style.marginTop = "6px";
+  sheetLink.style.color = "#2b4a2b";
+  sheetLink.style.fontWeight = "600";
+  sheetLink.style.textDecoration = "underline";
+  card.appendChild(sheetLink);
 }
+
+container.appendChild(card);
+
 
 </script>
 </body>
