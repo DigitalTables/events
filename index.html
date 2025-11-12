@@ -89,7 +89,7 @@
 </footer>
 
 <script type="module">
-import { supabase,SUPABASE_URL, getPrivateCsv } from './supabase.js';
+import { supabase, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
 const authDiv = document.getElementById("auth");
@@ -164,6 +164,21 @@ login.onclick = async () => {
   else onLogin();
 };
 
+// Vérifie si un pseudo est déjà utilisé
+async function checkPublicJsonExists(username) {
+  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
+  if (error) return false;
+  return data.some(f => f.name === `guests_${username}.json`);
+}
+
+usernameInput.addEventListener("blur", async () => {
+  const username = usernameInput.value.trim();
+  if (!username) { usernameStatus.textContent = ""; return; }
+  const exists = await checkPublicJsonExists(username);
+  usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé" : "✅ Disponible";
+  usernameStatus.style.color = exists ? "red" : "green";
+});
+
 // Gestion des lignes table → image
 function addTableImageRow() {
   const div = document.createElement("div");
@@ -178,7 +193,7 @@ function addTableImageRow() {
 }
 addTableImageRowBtn.addEventListener("click", addTableImageRow);
 
-// Upload CSV
+// ---- UPLOAD CSV ----
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -228,7 +243,7 @@ sendBtn.onclick = async () => {
     const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
     const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
     if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJsonName}`;
+    publicOrSignedUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
   } else {
     try {
       const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
@@ -260,7 +275,7 @@ sendBtn.onclick = async () => {
   loadUserUploads();
 };
 
-// Créer Google Sheet
+// ---- CRÉER GOOGLE SHEET ----
 createSheetBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -272,12 +287,11 @@ createSheetBtn.onclick = async () => {
   const isPrivate = privateCsvCheckbox.checked;
   const eventPassword = eventPasswordInput.value.trim();
 
-  // Récupérer token de session et l'utiliser comme Bearer
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
   if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet`, {
+  const res = await fetch(`${supabaseUrl}/functions/v1/create-google-sheet`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -293,7 +307,6 @@ createSheetBtn.onclick = async () => {
   const data = await res.json();
   if (!res.ok || !data.sheetUrl) return alert("❌ Erreur création Google Sheet : " + (data.error || "inconnue"));
 
-  // Stocker la Sheet dans la table events
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     user_id: user.id,
@@ -363,7 +376,7 @@ async function loadUserUploads() {
     csvLink.style.fontSize = "0.9rem";
 
     if (!e.is_private) {
-      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.href = `${supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
       csvLink.target = "_blank";
     } else {
       csvLink.href = "#";
@@ -399,20 +412,16 @@ async function loadUserUploads() {
     if (e.google_sheet_url) {
       const sheetLink = document.createElement("a");
       sheetLink.href = e.google_sheet_url;
+      sheetLink.textContent = "📊 Google Sheet";
       sheetLink.target = "_blank";
-      sheetLink.textContent = "📄 Ouvrir Google Sheet";
-      sheetLink.style.display = "block";
-      sheetLink.style.marginTop = "6px";
-      sheetLink.style.color = "#2b4a2b";
-      sheetLink.style.fontWeight = "600";
-      sheetLink.style.textDecoration = "underline";
+      sheetLink.style.display = "inline-block";
+      sheetLink.style.marginTop = "0.5rem";
       card.appendChild(sheetLink);
     }
 
     container.appendChild(card);
   });
 }
-
 </script>
 </body>
 </html>
