@@ -228,7 +228,7 @@ sendBtn.onclick = async () => {
     const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
     const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
     if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${supabaseUrl}/storage/v1/object/public/public-guests/${publicJsonName}`;
+    publicOrSignedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJsonName}`;
   } else {
     try {
       const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
@@ -277,7 +277,7 @@ createSheetBtn.onclick = async () => {
   const accessToken = session.data.session?.access_token;
   if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/create-google-sheet`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -363,7 +363,7 @@ async function loadUserUploads() {
     csvLink.style.fontSize = "0.9rem";
 
     if (!e.is_private) {
-      csvLink.href = `${supabaseUrl}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
       csvLink.target = "_blank";
     } else {
       csvLink.href = "#";
