@@ -291,18 +291,21 @@ createSheetBtn.onclick = async () => {
   const accessToken = session.data.session?.access_token;
   if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`
-    },
-    body: JSON.stringify({
-      username,
-      isPrivate,
-      event_password: eventPassword
-    })
-  });
+const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`), {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    username,
+    isPrivate,
+    event_password: eventPassword
+  })
+});
+
+
+  
 
   const data = await res.json();
   if (!res.ok || !data.sheetUrl) return alert("❌ Erreur création Google Sheet : " + (data.error || "inconnue"));
