@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Créer Google Sheet</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    #output { margin-top: 1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Créer un dossier / Google Sheet</h1>
+  <input type="text" id="username" placeholder="Nom de l'utilisateur">
+  <button id="createBtn">Créer Sheet</button>
+  <div id="output"></div>
+
+  <script>
+    const createBtn = document.getElementById('createBtn');
+    const output = document.getElementById('output');
+
+    createBtn.addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        output.textContent = "Merci de renseigner un nom d'utilisateur.";
+        return;
+      }
+
+      try {
+        const res = await fetch('https://xrffjwulhrydrhlvuhlj.supabase.co/functions/v1/create-shareddrive-google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer <ANON_KEY>' // <-- remplace par ta clé anonyme Supabase
+          },
+          body: JSON.stringify({ username, isPrivate: false })
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          output.textContent = "❌ Erreur : " + data.error;
+        } else {
+          output.innerHTML = `✅ Sheet créée ! <br>URL : <a href="${data.sheetUrl}" target="_blank">${data.sheetUrl}</a>`;
+        }
+      } catch (err) {
+        output.textContent = "Erreur fetch : " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
