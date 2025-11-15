@@ -340,7 +340,7 @@ createFolderBtn.onclick = async () => {
 
   try {
     // Appel via ton proxy CORS si nécessaire
-    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-folder`), {
+    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-shareddrive-google`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
