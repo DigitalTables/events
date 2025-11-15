@@ -72,7 +72,8 @@
   <br>
   <button id="send">Envoyer CSV</button>
   <button id="createSheet">Créer Google Sheet</button>
-
+<button id="createFolder">Créer Dossier</button>
+  
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
 </div>
 
@@ -324,6 +325,40 @@ const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABAS
   loadUserUploads();
 };
 
+
+  //creation folder
+  const createFolderBtn = document.getElementById("createFolder");
+
+createFolderBtn.onclick = async () => {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("❌ Tu dois être connecté.");
+
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
+
+  try {
+    // Appel via ton proxy CORS si nécessaire
+    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-folder`), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ /* tu peux ajouter des infos si la fonction les attend */ })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) return alert("❌ Erreur création Dossier : " + (data.error || "inconnue"));
+
+    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}`);
+  } catch (err) {
+    alert("Erreur fetch : " + err.message);
+  }
+};
+
+  
 // Dashboard
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
