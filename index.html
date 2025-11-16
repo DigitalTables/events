@@ -352,7 +352,7 @@ createFolderBtn.onclick = async () => {
     const data = await res.json();
     if (!res.ok || data.error) return alert("❌ Erreur création Dossier : " + (data.error || "inconnue"));
 
-    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}`);
+    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}\n Owner: ${data.owner} `);
   } catch (err) {
     alert("Erreur fetch : " + err.message);
   }
