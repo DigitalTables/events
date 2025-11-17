@@ -416,7 +416,10 @@ if (!data.files || data.files.length === 0) {
   resultBox.innerHTML = "<p>Aucun dossier trouvé.</p>";
   return;
 }
+   resultBox.innerHTML= JSON.stringify(files, null, 2);
+return;
 
+    
 // Construction du tableau
 let html = `
 <table border="1" cellspacing="0" cellpadding="6" style="margin:auto; border-collapse:collapse;">
