@@ -301,14 +301,28 @@ createSheetBtn.onclick = async () => {
   createSheetBtn.disabled = true;
 
   try {
+    
+    // Dans index.html, pour la fonction createSheetBtn.onclick
+const res = await fetch(
+    "https://corsproxy.io/?" +
+    encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      }
+    }
+);
+// ...
     // APPEL DIRECT (Sans corsproxy)
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet2`, {
+ /*   const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet2`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}` // On passe le token ici
       },
-      body: JSON.stringify({
+   */   body: JSON.stringify({
         username, // On passe le username pour nommer le fichier proprement
         isPrivate,
         event_password: eventPassword
