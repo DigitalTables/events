@@ -72,7 +72,7 @@
   <br>
   <button id="send">Envoyer CSV</button>
   <button id="createSheet">Créer Google Sheet</button>
-<button id="createFolder">Créer Dossier</button>
+<button id="folder-test">Test folder</button>
   <button id="listFolderBtn">List Folder</button>
 
   
@@ -353,9 +353,9 @@ createSheetBtn.onclick = async () => {
   
 
   //creation folder
-  const createFolderBtn = document.getElementById("createFolder");
+  const folder-testBtn = document.getElementById("folder-test");
 
-createFolderBtn.onclick = async () => {
+folder-testBtn.onclick = async () => {
   
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -367,7 +367,7 @@ createFolderBtn.onclick = async () => {
 
   try {
     // Appel via ton proxy CORS si nécessaire
-    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-shareddrive-google`), {
+    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/folder-test`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
