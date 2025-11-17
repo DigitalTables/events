@@ -297,7 +297,7 @@ createSheetBtn.onclick = async () => {
   const accessToken = session.data.session?.access_token;
   if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
 
-const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`), {
+const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet2`), {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
