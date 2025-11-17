@@ -300,22 +300,23 @@ createSheetBtn.onclick = async () => {
   createSheetBtn.disabled = true;
 
   try {
-    const res = await fetch(
-      "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          username,          // nom du fichier Google Sheet
-          isPrivate,
-          event_password: eventPassword
-        })
-      }
-    );
+   const res = await fetch(
+  "https://corsproxy.io/?" +
+  encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`),
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      username,
+      isPrivate,
+      event_password: eventPassword
+    })
+  }
+);
+
 
     const data = await res.json();
 
@@ -352,11 +353,9 @@ createSheetBtn.onclick = async () => {
 
   
 
-  //creation folder
-  const folder-testBtn = document.getElementById("folder-test");
+  const folderTestBtn = document.getElementById("folder-test");
 
-folder-testBtn.onclick = async () => {
-  
+folderTestBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("❌ Tu dois être connecté.");
@@ -366,20 +365,25 @@ folder-testBtn.onclick = async () => {
   if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
 
   try {
-    // Appel via ton proxy CORS si nécessaire
-    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/folder-test`), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({ /* tu peux ajouter des infos si la fonction les attend */ })
-    });
+    const res = await fetch(
+      "https://corsproxy.io/?" +
+      encodeURIComponent(`${SUPABASE_URL}/functions/v1/folder-test`),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({})
+      }
+    );
 
     const data = await res.json();
-    if (!res.ok || data.error) return alert("❌ Erreur création Dossier : " + (data.error || "inconnue"));
+    if (!res.ok || data.error)
+      return alert("❌ Erreur création Dossier : " + (data.error || "inconnue"));
 
-    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}\n Owner: ${data.owner} `);
+    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}\nOwner : ${data.owner}`);
+
   } catch (err) {
     alert("Erreur fetch : " + err.message);
   }
