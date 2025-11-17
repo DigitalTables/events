@@ -73,9 +73,14 @@
   <button id="send">Envoyer CSV</button>
   <button id="createSheet">Créer Google Sheet</button>
 <button id="createFolder">Créer Dossier</button>
+  <button id="listFolderBtn">List Folder</button>
+
   
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
 </div>
+
+  <div id="folderResult"></div>
+
 
 <!-- Section Dashboard -->
 <div id="dashboard" style="display:none; margin-top:3rem; padding: 0 2rem;">
@@ -330,6 +335,7 @@ const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABAS
   const createFolderBtn = document.getElementById("createFolder");
 
 createFolderBtn.onclick = async () => {
+  
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("❌ Tu dois être connecté.");
@@ -340,7 +346,7 @@ createFolderBtn.onclick = async () => {
 
   try {
     // Appel via ton proxy CORS si nécessaire
-    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`), {
+    const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-shareddrive-google`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -357,6 +363,94 @@ createFolderBtn.onclick = async () => {
     alert("Erreur fetch : " + err.message);
   }
 };
+
+//list folders
+
+  const listFolderBtn = document.getElementById("listFolderBtn");
+const resultBox = document.getElementById("folderResult");
+
+listFolderBtn.addEventListener("click", listFolder);
+
+async function listFolder() {
+  if (!user) {
+    resultBox.textContent = "❌ Tu dois être connecté.";
+    return;
+  }
+
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) {
+    resultBox.textContent = "❌ Token introuvable, reconnecte-toi.";
+    return;
+  }
+
+  try {
+    // Appel direct à la Edge Function (RECOMMANDÉ)
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/list-folder`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultBox.textContent = "❌ Erreur : " + JSON.stringify(data, null, 2);
+      return;
+    }
+
+    // 🎉 Afficher le résultat dans le div <pre>
+    resultBox.textContent = JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    resultBox.textContent = "❌ Erreur fetch : " + err.message;
+  }
+}
+
+  const resultBox = document.getElementById("folderResult");
+
+async function listFolder() {
+  if (!user) {
+    resultBox.textContent = "❌ Tu dois être connecté.";
+    return;
+  }
+
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) {
+    resultBox.textContent = "❌ Token introuvable, reconnecte-toi.";
+    return;
+  }
+
+  try {
+    const res = await fetch(
+  "https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`,
+    }
+  }
+);
+
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultBox.textContent = `❌ Erreur : ${JSON.stringify(data, null, 2)}`;
+      return;
+    }
+
+    // 🎉 Affichage dans le HTML
+    resultBox.textContent = JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    resultBox.textContent = `❌ Erreur fetch : ${err.message}`;
+  }
+}
 
   
 // Dashboard
