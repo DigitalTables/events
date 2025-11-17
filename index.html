@@ -294,21 +294,54 @@ createSheetBtn.onclick = async () => {
   const eventPassword = eventPasswordInput.value.trim();
 
   const session = await supabase.auth.getSession();
-  const accessToken = session.data.session?.access_token;
-  if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
+  const accessToken = session.data.session?.access_token; // IMPORTANT: C'est ce token qui authentifie l'user
+  
+  createSheetBtn.textContent = "Création en cours...";
+  createSheetBtn.disabled = true;
 
-const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet2`), {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${accessToken}`
-  },
-  body: JSON.stringify({
-    username,
-    isPrivate,
-    event_password: eventPassword
-  })
-});
+  try {
+    // APPEL DIRECT (Sans corsproxy)
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-google-sheet2`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}` // On passe le token ici
+      },
+      body: JSON.stringify({
+        username, // On passe le username pour nommer le fichier proprement
+        isPrivate,
+        event_password: eventPassword
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Erreur inconnue");
+    if (!data.sheetUrl) throw new Error("Pas d'URL reçue");
+
+    // Mise à jour base de données
+    const { error: upsertErr } = await supabase.from("events").upsert({
+      username,
+      user_id: user.id,
+      is_private: isPrivate,
+      event_password: eventPassword || null,
+      google_sheet_url: data.sheetUrl,
+      uploaded_at: new Date()
+    }, { onConflict: "username" });
+
+    if (upsertErr) throw upsertErr;
+
+    alert("✅ Google Sheet créée et partagée avec votre email !");
+    loadUserUploads();
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Erreur : " + err.message);
+  } finally {
+    createSheetBtn.textContent = "Créer Google Sheet";
+    createSheetBtn.disabled = false;
+  }
+};
 
 
   
