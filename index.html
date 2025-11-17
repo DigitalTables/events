@@ -371,45 +371,6 @@ const resultBox = document.getElementById("folderResult");
 
 listFolderBtn.addEventListener("click", listFolder);
 
-async function listFolder() {
-  if (!user) {
-    resultBox.textContent = "❌ Tu dois être connecté.";
-    return;
-  }
-
-  const session = await supabase.auth.getSession();
-  const accessToken = session.data.session?.access_token;
-  if (!accessToken) {
-    resultBox.textContent = "❌ Token introuvable, reconnecte-toi.";
-    return;
-  }
-
-  try {
-    // Appel direct à la Edge Function (RECOMMANDÉ)
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/list-folder`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      }
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      resultBox.textContent = "❌ Erreur : " + JSON.stringify(data, null, 2);
-      return;
-    }
-
-    // 🎉 Afficher le résultat dans le div <pre>
-    resultBox.textContent = JSON.stringify(data, null, 2);
-
-  } catch (err) {
-    resultBox.textContent = "❌ Erreur fetch : " + err.message;
-  }
-}
-
-  const resultBox = document.getElementById("folderResult");
 
 async function listFolder() {
   if (!user) {
