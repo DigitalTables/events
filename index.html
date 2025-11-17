@@ -416,7 +416,8 @@ if (!data.files || data.files.length === 0) {
   resultBox.innerHTML = "<p>Aucun dossier trouvé.</p>";
   return;
 }
-   resultBox.innerHTML= JSON.stringify(files, null, 2);
+   // JSON brut dans un <pre> pour conserver la mise en forme
+    resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
 
 
      catch (err) {
