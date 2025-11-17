@@ -364,15 +364,19 @@ createFolderBtn.onclick = async () => {
   }
 };
 
-//list folders
+// ---- LIST FOLDER ----
 
-  const listFolderBtn = document.getElementById("listFolderBtn");
+const listFolderBtn = document.getElementById("listFolderBtn");
 const resultBox = document.getElementById("folderResult");
 
 listFolderBtn.addEventListener("click", listFolder);
 
-
 async function listFolder() {
+
+  // 🔥 Récupérer utilisateur (obligatoire)
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+
   if (!user) {
     resultBox.textContent = "❌ Tu dois être connecté.";
     return;
@@ -380,6 +384,7 @@ async function listFolder() {
 
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
+
   if (!accessToken) {
     resultBox.textContent = "❌ Token introuvable, reconnecte-toi.";
     return;
@@ -387,16 +392,15 @@ async function listFolder() {
 
   try {
     const res = await fetch(
-  "https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`,
-    }
-  }
-);
-
+      "https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        }
+      }
+    );
 
     const data = await res.json();
 
@@ -405,7 +409,7 @@ async function listFolder() {
       return;
     }
 
-    // 🎉 Affichage dans le HTML
+    // Afficher JSON dans la zone HTML
     resultBox.textContent = JSON.stringify(data, null, 2);
 
   } catch (err) {
