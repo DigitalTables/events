@@ -309,27 +309,21 @@ createSheetBtn.onclick = async () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          username,          
-          isPrivate,
-          event_password: eventPassword
-        })
+        body: JSON.stringify({ username, isPrivate, event_password: eventPassword })
       }
     );
 
+    const text = await res.text(); // récupère le texte brut
     let data;
     try {
-      data = await res.json();
-    } catch (jsonErr) {
-      // Si la réponse n'est pas un JSON, on récupère le texte brut
-      const text = await res.text();
+      data = JSON.parse(text); // essaie de parser en JSON
+    } catch {
       throw new Error(`Réponse non JSON : ${text}`);
     }
 
-    if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+    if (!res.ok) throw new Error(`HTTP ${res.status} : ${JSON.stringify(data)}`);
     if (!data.sheetUrl) throw new Error("Pas d'URL reçue");
 
-    // Update Supabase
     const { error: upsertErr } = await supabase.from("events").upsert({
       username,
       user_id: user.id,
@@ -360,7 +354,7 @@ createSheetBtn.onclick = async () => {
   
 
   
-
+//Folder test
   const folderTestBtn = document.getElementById("folder-test");
 
 folderTestBtn.onclick = async () => {
