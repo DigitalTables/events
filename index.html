@@ -371,6 +371,13 @@ const resultBox = document.getElementById("folderResult");
 
 listFolderBtn.addEventListener("click", listFolder);
 
+// ---- LIST FOLDER ----
+
+const listFolderBtn = document.getElementById("listFolderBtn");
+const resultBox = document.getElementById("folderResult");
+
+listFolderBtn.addEventListener("click", listFolder);
+
 async function listFolder() {
 
   // 🔥 Récupérer utilisateur (obligatoire)
@@ -392,7 +399,8 @@ async function listFolder() {
 
   try {
     const res = await fetch(
-      "https://corsproxy.io/?" + encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
+      "https://corsproxy.io/?" +
+        encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
       {
         method: "POST",
         headers: {
@@ -409,23 +417,19 @@ async function listFolder() {
       return;
     }
 
-    // Afficher JSON dans la zone HTML
+    // Si aucun dossier
+    if (!data.files || data.files.length === 0) {
+      resultBox.innerHTML = "<p>Aucun dossier trouvé.</p>";
+      return;
+    }
 
-// Si aucun dossier
-if (!data.files || data.files.length === 0) {
-  resultBox.innerHTML = "<p>Aucun dossier trouvé.</p>";
-  return;
-}
-   // JSON brut dans un <pre> pour conserver la mise en forme
+    // JSON brut dans un <pre> pour conserver la mise en forme
     resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
 
-
-     catch (err) {
+  } catch (err) {
     resultBox.textContent = `❌ Erreur fetch : ${err.message}`;
   }
 }
-
-  
 // Dashboard
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
