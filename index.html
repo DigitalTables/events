@@ -346,23 +346,7 @@ createSheetBtn.onclick = async () => {
 
   
 
-  const data = await res.json();
-  if (!res.ok || !data.sheetUrl) return alert("❌ Erreur création Google Sheet : " + (data.error || "inconnue"));
-
-  const { error: upsertErr } = await supabase.from("events").upsert({
-    username,
-    user_id: user.id,
-    is_private: isPrivate,
-    event_password: eventPassword || null,
-    google_sheet_url: data.sheetUrl,
-    uploaded_at: new Date()
-  }, { onConflict: "username" });
-  if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
-
-  alert("✅ Google Sheet créée avec succès !");
-  loadUserUploads();
-};
-
+  
 
   //creation folder
   const createFolderBtn = document.getElementById("createFolder");
