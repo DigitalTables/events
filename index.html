@@ -302,7 +302,7 @@ createSheetBtn.onclick = async () => {
   try {
     const res = await fetch(
       "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`),
+      encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-googlesheet`),
       {
         method: "POST",
         headers: {
