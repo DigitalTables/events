@@ -72,6 +72,7 @@
   <br>
   <button id="send">Envoyer CSV</button>
   <button id="createSheet">Créer Google Sheet</button>
+  <button id="syncSheets">Sync Sheets Pool</button>
 <button id="folder-test">Test folder</button>
   <button id="listFolderBtn">List Folder</button>
 
@@ -290,57 +291,49 @@ createSheetBtn.onclick = async () => {
   const username = usernameInput.value.trim();
   if (!username) return alert("❌ Choisis un identifiant public.");
 
-  const isPrivate = privateCsvCheckbox.checked;
-  const eventPassword = eventPasswordInput.value.trim();
-
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
 
-  createSheetBtn.textContent = "Création en cours...";
+  createSheetBtn.textContent = "Assignation en cours...";
   createSheetBtn.disabled = true;
 
   try {
     const res = await fetch(
       "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/create-google-sheet`),
+      encodeURIComponent(`${SUPABASE_URL}/functions/v1/assign-google-sheet`),
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ username, isPrivate, event_password: eventPassword })
+        body: JSON.stringify({
+          username,
+          user_id: user.id
+        })
       }
     );
 
-    const text = await res.text(); // récupère le texte brut
-    let data;
-    try {
-      data = JSON.parse(text); // essaie de parser en JSON
-    } catch {
-      throw new Error(`Réponse non JSON : ${text}`);
-    }
+    const data = await res.json();
 
-    if (!res.ok) throw new Error(`HTTP ${res.status} : ${JSON.stringify(data)}`);
-    if (!data.sheetUrl) throw new Error("Pas d'URL reçue");
+    if (!res.ok) throw new Error(data.error || "Erreur assignation");
 
-    const { error: upsertErr } = await supabase.from("events").upsert({
-      username,
-      user_id: user.id,
-      is_private: isPrivate,
-      event_password: eventPassword || null,
-      google_sheet_url: data.sheetUrl,
-      uploaded_at: new Date()
-    }, { onConflict: "username" });
+    // 🔥 Affichage direct du lien Google Sheet
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
 
-    if (upsertErr) throw upsertErr;
+    alert(`✅ Google Sheet assignée !`);
+    publicUrlDiv.innerHTML += `
+      <br><br>
+      📊 Google Sheet liée :
+      <a href="${sheetUrl}" target="_blank">${sheetUrl}</a>
+    `;
 
-    alert("✅ Google Sheet créée et partagée avec votre email !");
+    // Mise à jour de la DB locale affichée
     loadUserUploads();
 
   } catch (err) {
-    console.error("Erreur complète :", err);
-    alert("❌ Erreur : " + (err.message || JSON.stringify(err)));
+    console.error(err);
+    alert("❌ Erreur assignation : " + err.message);
   } finally {
     createSheetBtn.textContent = "Créer Google Sheet";
     createSheetBtn.disabled = false;
@@ -348,7 +341,46 @@ createSheetBtn.onclick = async () => {
 };
 
 
+
     
+//Sync folder google sheet and database
+  const syncBtn = document.getElementById("syncSheets");
+
+syncBtn.onclick = async () => {
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+
+  if (!accessToken) return alert("❌ Connecte-toi d'abord.");
+
+  syncBtn.textContent = "Sync...";
+  syncBtn.disabled = true;
+
+  try {
+    const res = await fetch(
+      "https://corsproxy.io/?" +
+      encodeURIComponent(`${SUPABASE_URL}/functions/v1/sync-sheets-pool`),
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Erreur sync");
+
+    alert("✅ Sync terminée : " + data.count + " sheets mises à jour.");
+    
+  } catch (err) {
+    alert("❌ Sync error : " + err.message);
+  } finally {
+    syncBtn.textContent = "Sync Sheets Pool";
+    syncBtn.disabled = false;
+  }
+};
 
 
   
