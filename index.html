@@ -370,7 +370,11 @@ syncBtn.onclick = async () => {
 
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error || "Erreur sync");
+    if (!res.ok) {
+  console.error("SYNC RAW ERROR:", data);
+  throw new Error(data.error || JSON.stringify(data));
+}
+
 
     alert("✅ Sync terminée : " + data.count + " sheets mises à jour.");
     
