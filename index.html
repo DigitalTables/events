@@ -358,7 +358,7 @@ syncBtn.onclick = async () => {
   try {
     const res = await fetch(
       "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/sync-sheets-pool`),
+      encodeURIComponent(`${SUPABASE_URL}/functions/v1/sync-google-sheets-pool`),
       {
         method: "POST",
         headers: {
