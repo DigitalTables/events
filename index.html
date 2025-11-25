@@ -343,7 +343,7 @@ createSheetBtn.onclick = async () => {
 };
 
 // ---- CRÉER GOOGLE SHEET Core Function ----
-createSheetBtnCore.onclick = async () => {
+createSheetCoreBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("❌ Tu dois être connecté.");
