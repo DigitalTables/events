@@ -4,7 +4,7 @@ let googleAuthWindow = null;
 
 export async function googleSignInPopup() {
   return new Promise((resolve, reject) => {
-    const redirectUri = window.location.origin + "/oauth-callback.html";
+    const redirectUri = window.location.origin + "/oauth.html";
 
     const authUrl =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
