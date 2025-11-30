@@ -286,61 +286,76 @@ sendBtn.onclick = async () => {
 
 // ---- CRÉER GOOGLE SHEET ----
 createSheetBtn.onclick = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return alert("❌ Tu dois être connecté.");
-
-  const username = usernameInput.value.trim();
-  if (!username) return alert("❌ Choisis un identifiant public.");
-
-  const session = await supabase.auth.getSession();
-  const accessToken = session.data.session?.access_token;
-
-  createSheetBtn.textContent = "Assignation en cours...";
-  createSheetBtn.disabled = true;
-
   try {
-    const res = await fetch(
-      "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/assign-google-sheet`),
+    // 1) Connexion OAuth dans une popup
+    const accessToken = await googleSignInPopup();
+
+    // 2) Création d'une Google Sheet
+    const sheetRes = await fetch(
+      "https://sheets.googleapis.com/v4/spreadsheets",
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          username,
-          userId: user.id
+          properties: {
+            title: "DigitalTables - Votre table"
+          },
+          sheets: [
+            {
+              properties: { title: "Ma Table" },
+              data: [
+                {
+                  startRow: 0,
+                  startColumn: 0,
+                  rowData: [
+                    {
+                      values: [
+                        { userEnteredValue: { stringValue: "name" } },
+                        { userEnteredValue: { stringValue: "table" } },
+                        { userEnteredValue: { stringValue: "message" } }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         })
       }
     );
 
-    const data = await res.json();
+    if (!sheetRes.ok) {
+      console.error(await sheetRes.text());
+      throw new Error("Erreur lors de la création de la Google Sheet");
+    }
 
-    if (!res.ok) throw new Error(data.error || "Erreur assignation");
+    const sheetData = await sheetRes.json();
+    const spreadsheetId = sheetData.spreadsheetId;
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
-    // 🔥 Affichage direct du lien Google Sheet
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
+    // 3) Enregistrement dans Supabase
+    // ⚠️ Adapte la table/colonnes ci-dessous à ta base
+    const { data, error } = await supabase
+      .from("events")
+      .insert({
+        google_sheet_url: sheetUrl,
+        created_at: new Date().toISOString()
+      });
 
-    alert(`✅ Google Sheet assignée !`);
-    publicUrlDiv.innerHTML += `
-      <br><br>
-      📊 Google Sheet liée :
-      <a href="${sheetUrl}" target="_blank">${sheetUrl}</a>
-    `;
+    if (error) throw error;
 
-    // Mise à jour de la DB locale affichée
-    loadUserUploads();
+    // 4) Redirection vers la Sheet
+    window.location.href = sheetUrl;
 
   } catch (err) {
     console.error(err);
-    alert("❌ Erreur assignation : " + err.message);
-  } finally {
-    createSheetBtn.textContent = "Créer Google Sheet";
-    createSheetBtn.disabled = false;
+    alert("Erreur: " + err.message);
   }
 };
+
 
 // ---- CRÉER GOOGLE SHEET Core Function ----
 createSheetCoreBtn.onclick = async () => {
