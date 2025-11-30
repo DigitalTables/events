@@ -287,10 +287,11 @@ sendBtn.onclick = async () => {
 // ---- CRÉER GOOGLE SHEET ----
 createSheetBtn.onclick = async () => {
   try {
-    // 1) Connexion OAuth dans une popup
+    // Étape 1 : Popup OAuth Google
     const accessToken = await googleSignInPopup();
+    console.log("OAuth OK, token=", accessToken);
 
-    // 2) Création d'une Google Sheet
+    // Étape 2 : Création Google Sheet
     const sheetRes = await fetch(
       "https://sheets.googleapis.com/v4/spreadsheets",
       {
@@ -301,15 +302,13 @@ createSheetBtn.onclick = async () => {
         },
         body: JSON.stringify({
           properties: {
-            title: "DigitalTables - Votre table"
+            title: "DigitalTables - Event"
           },
           sheets: [
             {
-              properties: { title: "Ma Table" },
+              properties: { title: "Invités" },
               data: [
                 {
-                  startRow: 0,
-                  startColumn: 0,
                   rowData: [
                     {
                       values: [
@@ -329,32 +328,31 @@ createSheetBtn.onclick = async () => {
 
     if (!sheetRes.ok) {
       console.error(await sheetRes.text());
-      throw new Error("Erreur lors de la création de la Google Sheet");
+      throw new Error("Erreur création Google Sheet");
     }
 
     const sheetData = await sheetRes.json();
     const spreadsheetId = sheetData.spreadsheetId;
+
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
-    // 3) Enregistrement dans Supabase
-    // ⚠️ Adapte la table/colonnes ci-dessous à ta base
-    const { data, error } = await supabase
+    // Étape 3 : Sauvegarde dans Supabase
+    const { data: eventData, error } = await supabase
       .from("events")
-      .insert({
-        google_sheet_url: sheetUrl,
-        created_at: new Date().toISOString()
-      });
+      .update({ google_sheet_url: sheetUrl })
+      .eq("username", usernameInput.value.trim());
 
     if (error) throw error;
 
-    // 4) Redirection vers la Sheet
-    window.location.href = sheetUrl;
+    alert("Google Sheet créée !");
+    window.open(sheetUrl, "_blank");
 
   } catch (err) {
     console.error(err);
-    alert("Erreur: " + err.message);
+    alert("Erreur : " + err.message);
   }
 };
+
 
 
 // ---- CRÉER GOOGLE SHEET Core Function ----
