@@ -4,7 +4,7 @@ export const SUPABASE_URL = "https://xrffjwulhrydrhlvuhlj.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZmZqd3VsaHJ5ZHJobHZ1aGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2Mjc2MDQsImV4cCI6MjA3NjIwMzYwNH0.uzlCCfMol_8RqRG2fx4RITkLTZogIKWTQd5zhZELjhg";
 
 export const supabase = createClient(SUPABASE_URL, supabaseAnonKey);
-
+export const GOOGLE_CLIENT_ID= "1036214240835-f3cpd0sjeomk1gc31t3sv6v4r6shl729.apps.googleusercontent.com"
 /**
  * Récupère le CSV privé signé via Edge Function
  */
