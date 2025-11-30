@@ -2,11 +2,24 @@
 <html>
 <body>
 <script>
-  window.onload = () => {
-    // Laisse google-oauth.js récupérer le hash depuis la popup
-    window.close();
-  };
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get("access_token");
+  const error = params.get("error");
+
+  if (accessToken) {
+    window.opener.postMessage(
+      { type: "oauth-success", access_token: accessToken },
+      "*"
+    );
+  } else {
+    window.opener.postMessage(
+      { type: "oauth-error", error: error || "Unknown error" },
+      "*"
+    );
+  }
+
+  window.close();
 </script>
-<p>OAuth OK, vous pouvez fermer cette fenêtre.</p>
 </body>
 </html>
