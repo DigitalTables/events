@@ -37,7 +37,7 @@
   <button id="login">Se connecter</button>
 </div>
 
-<!-- Section Upload -->
+<!-- Section Create Event (choice CSV or Google Sheet) -->
 <div id="upload" style="display:none; text-align:center; margin-top:2rem;">
   <div style="margin-bottom:1rem;">
     <label for="username" style="display:block; font-weight:700; margin-bottom:0.25rem;">
@@ -60,18 +60,26 @@
     <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
   </div>
 
-  <h3>Uploader ton CSV et tes images</h3>
+  <div style="margin:1rem 0;">
+    <label style="font-weight:700; display:block; margin-bottom:0.5rem;">Mode de création :</label>
+    <label><input type="radio" name="mode" value="csv" id="modeCsv" checked /> Créer via CSV</label>
+    <label style="margin-left:1rem;"><input type="radio" name="mode" value="sheet" id="modeSheet" /> Créer via Google Sheet</label>
+    <div style="font-size:0.9rem; color:#666; margin-top:0.25rem;">
+      (Choisissez l'une des deux options : <strong>CSV</strong> upload ou <strong>Google Sheet</strong> depuis le pool.)
+    </div>
+  </div>
+
+  <h3 id="uploadTitle">Uploader ton CSV et tes images</h3>
   <input type="file" id="guests" accept=".csv" /><br><br>
 
   <div id="tablesImagesContainer">
-    <p>Associez vos images aux tables :</p>
+    <p>Associez vos images aux tables (optionnel) :</p>
     <div id="tableImageRows"></div>
     <button id="addTableImageRow">Ajouter une table/image</button>
   </div>
 
   <br>
-  <button id="send">Envoyer CSV</button>
-  <button id="createSheet">Créer Google Sheet</button>
+  <button id="createEventBtn">Créer l'événement</button>
   <button id="syncSheets">Sync Sheets Pool</button>
   <button id="folder-test">Test folder</button>
   <button id="listFolderBtn">List Folder</button>
@@ -95,7 +103,7 @@
 
 <script type="module">
 /* ----------------------------
-   IMPORTS SUPABASE + OAUTH
+   IMPORTS SUPABASE + PAPAPARSE
 ---------------------------- */
 import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
@@ -110,8 +118,7 @@ const email = document.getElementById("email");
 const password = document.getElementById("password");
 const signup = document.getElementById("signup");
 const login = document.getElementById("login");
-const sendBtn = document.getElementById("send");
-const createSheetBtn = document.getElementById("createSheet");
+const createEventBtn = document.getElementById("createEventBtn");
 const csvInput = document.getElementById("guests");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
@@ -122,6 +129,9 @@ const publicUrlDiv = document.getElementById("publicUrl");
 const tableImageRows = document.getElementById("tableImageRows");
 const addTableImageRowBtn = document.getElementById("addTableImageRow");
 const dashboardDiv = document.getElementById("dashboard");
+const modeCsv = document.getElementById("modeCsv");
+const modeSheet = document.getElementById("modeSheet");
+const uploadTitle = document.getElementById("uploadTitle");
 
 /* ----------------------------
    TOGGLE PASSWORD IF PRIVATE
@@ -129,6 +139,22 @@ const dashboardDiv = document.getElementById("dashboard");
 privateCsvCheckbox.addEventListener("change", () => {
   passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
 });
+
+/* ----------------------------
+   MODE SWITCH (CSV vs SHEET)
+---------------------------- */
+function updateModeUI() {
+  if (modeCsv.checked) {
+    uploadTitle.textContent = "Uploader ton CSV et tes images";
+    csvInput.style.display = "inline-block";
+  } else {
+    uploadTitle.textContent = "Ajouter des images (optionnel) puis créer la Google Sheet";
+    csvInput.style.display = "none";
+  }
+}
+modeCsv.addEventListener("change", updateModeUI);
+modeSheet.addEventListener("change", updateModeUI);
+updateModeUI();
 
 /* ----------------------------
    LOGIN / LOGOUT
@@ -228,34 +254,9 @@ function addTableImageRow() {
 addTableImageRowBtn.addEventListener("click", addTableImageRow);
 
 /* ----------------------------
-   UPLOAD CSV + IMAGES
+   HELPERS: upload images mapping
 ---------------------------- */
-sendBtn.onclick = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return alert("Connecte-toi.");
-
-  const username = usernameInput.value.trim();
-  if (!username) return alert("Choisis un identifiant.");
-
-  const isPrivate = privateCsvCheckbox.checked;
-  const eventPassword = eventPasswordInput.value.trim();
-  if (isPrivate && !eventPassword) return alert("Mot de passe requis.");
-
-  const csvFile = csvInput.files[0];
-  if (!csvFile) return alert("Choisis un CSV.");
-  const text = await csvFile.text();
-  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-  const rows = parsed.data;
-
-  // Upload CSV dans bucket "guests"
-  const csvPath = `guests_${username}.csv`;
-  const { error: csvUpErr } = await supabase.storage
-    .from("guests")
-    .upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
-  if (csvUpErr) return alert("Erreur CSV: " + csvUpErr.message);
-
-  // Images mapping
+async function uploadImagesMapping(username) {
   const imagesMapping = {};
   const divs = tableImageRows.querySelectorAll("div");
   for (const div of divs) {
@@ -266,110 +267,185 @@ sendBtn.onclick = async () => {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "_");
     const imgPath = `${username}/tables/${cleanName}`;
-    await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
+    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
+    if (imgErr) throw new Error("Erreur upload image: " + imgErr.message);
     imagesMapping[tableName] = imgPath;
   }
-
-  let publicOrSignedUrl = null;
-  if (!isPrivate) {
-    const publicJson = `guests_${username}.json`;
-    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], {
-      type: "application/json"
-    });
-    await supabase.storage.from("public-guests")
-      .upload(publicJson, jsonBlob, { upsert: true });
-    publicOrSignedUrl =
-      `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJson}`;
-  } else {
-    const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
-    publicOrSignedUrl = signedUrl;
-  }
-
-  // Upsert event
-  const { error: upsertErr } = await supabase.from("events").upsert({
-    username,
-    event_password: isPrivate ? eventPassword : null,
-    signed_url: publicOrSignedUrl,
-    is_private: isPrivate,
-    user_id: user.id,
-    uploaded_at: new Date(),
-    images_mapping: imagesMapping
-  }, { onConflict: "username" });
-  if (upsertErr) return alert("Erreur upsert: " + upsertErr.message);
-
-  const eventUrl =
-    `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
-  publicUrlDiv.innerHTML =
-    isPrivate
-      ? `🔒 Privé :<br><a href="${eventUrl}" target="_blank">${eventUrl}</a>`
-      : `🌍 Public :<br><a href="${eventUrl}" target="_blank">${eventUrl}</a><br>${publicOrSignedUrl}`;
-
-  alert("Upload terminé !");
-  loadUserUploads();
-};
+  return imagesMapping;
+}
 
 /* ----------------------------
-   CRÉER UNE GOOGLE SHEET
+   CREATE EVENT (CSV MODE or SHEET MODE)
 ---------------------------- */
-createSheetBtn.onclick = async () => {
+createEventBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
-  if (!user) return alert("Connecte-toi.");
+  if (!user) return alert("❌ Connecte-toi.");
 
   const username = usernameInput.value.trim();
-  if (!username) return alert("Choisis un identifiant public.");
+  if (!username) return alert("❌ Choisis un identifiant public.");
 
-  const session = await supabase.auth.getSession();
-  const accessToken = session.data.session?.access_token;
+  const isPrivate = privateCsvCheckbox.checked;
+  const eventPassword = eventPasswordInput.value.trim();
+  if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
 
-  // 🔍 Récupérer l’événement (pour event_id, is_private)
-  const { data: ev } = await supabase
-    .from("events")
-    .select("id, is_private")
-    .eq("username", username)
-    .single();
-  if (!ev) return alert("Événement introuvable, upload CSV d’abord.");
+  const mode = modeCsv.checked ? "csv" : "sheet";
 
-  createSheetBtn.textContent = "Assignation...";
-  createSheetBtn.disabled = true;
-
+  // Upload images mapping (works in both modes)
+  let imagesMapping = {};
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          username,
-          user_id: user.id,
-          event_id: ev.id,
-          is_public_event: !ev.is_private
-        })
+    imagesMapping = await uploadImagesMapping(username);
+  } catch (e) {
+    return alert(e.message);
+  }
+
+  if (mode === "csv") {
+    // CSV flow: require CSV file
+    const csvFile = csvInput.files[0];
+    if (!csvFile) return alert("❌ Choisis un fichier CSV.");
+
+    createEventBtn.textContent = "Création en cours...";
+    createEventBtn.disabled = true;
+
+    try {
+      const text = await csvFile.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const rows = parsed.data;
+
+      // Upload CSV to storage
+      const csvPath = `guests_${username}.csv`;
+      const { error: csvUpErr } = await supabase.storage
+        .from("guests")
+        .upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
+      if (csvUpErr) throw new Error("Erreur upload CSV: " + csvUpErr.message);
+
+      // If public → upload JSON version to bucket public-guests
+      let publicOrSignedUrl = null;
+      if (!isPrivate) {
+        const publicJson = `guests_${username}.json`;
+        const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], {
+          type: "application/json"
+        });
+        const { error: jsonUpErr } = await supabase.storage.from("public-guests")
+          .upload(publicJson, jsonBlob, { upsert: true });
+        if (jsonUpErr) throw new Error("Erreur upload JSON: " + jsonUpErr.message);
+        publicOrSignedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJson}`;
+      } else {
+        // private => store signed url placeholder; actual signed url generated by function getPrivateCsv when needed
+        publicOrSignedUrl = null;
       }
-    );
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+      // Upsert event and get record (so we have event id)
+      const eventObj = {
+        username,
+        event_password: isPrivate ? eventPassword : null,
+        signed_url: publicOrSignedUrl,
+        is_private: isPrivate,
+        user_id: user.id,
+        uploaded_at: new Date().toISOString(),
+        images_mapping: imagesMapping
+      };
 
-    const sheetUrl =
-      `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
+      const { data: insertedEvent, error: upsertErr } = await supabase
+        .from("events")
+        .upsert(eventObj, { onConflict: "username" })
+        .select()
+        .single();
+      if (upsertErr) throw upsertErr;
 
-    alert("Google Sheet assignée !");
-    publicUrlDiv.innerHTML += `
-      <br><br>
-      📊 Google Sheet :
-      <a href="${sheetUrl}" target="_blank">${sheetUrl}</a>
-    `;
+      // Done: display link
+      const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
+      publicUrlDiv.innerHTML = isPrivate
+        ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
+        : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
-    loadUserUploads();
-  } catch (err) {
-    alert("Erreur assignation: " + err.message);
-  } finally {
-    createSheetBtn.textContent = "Créer Google Sheet";
-    createSheetBtn.disabled = false;
+      alert("✅ Événement créé via CSV !");
+      loadUserUploads();
+
+    } catch (err) {
+      alert("❌ Erreur création événement CSV : " + (err.message || err));
+    } finally {
+      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.disabled = false;
+    }
+
+  } else {
+    // SHEET flow: create event record first (no CSV), then call edge function to assign sheet
+    createEventBtn.textContent = "Création Google Sheet...";
+    createEventBtn.disabled = true;
+
+    try {
+      // 1) create event row (so we have event_id)
+      const eventObj = {
+        username,
+        event_password: isPrivate ? eventPassword : null,
+        signed_url: null,
+        is_private: isPrivate,
+        user_id: user.id,
+        uploaded_at: new Date().toISOString(),
+        images_mapping: imagesMapping
+      };
+      const { data: insertedEvent, error: upsertErr } = await supabase
+        .from("events")
+        .upsert(eventObj, { onConflict: "username" })
+        .select()
+        .single();
+      if (upsertErr) throw upsertErr;
+      const event_id = insertedEvent.id;
+
+      // 2) call edge function assign-google-sheet
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) throw new Error("Token introuvable, reconnecte-toi.");
+
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            username,
+            user_id: user.id,
+            event_id,
+            is_public_event: !isPrivate
+          })
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
+
+      // 3) update event with google_sheet_url if function didn't already
+      const sheetEditUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
+      const publicCsvUrl = data.is_public_event ? `https://docs.google.com/spreadsheets/d/${data.sheet_id}/gviz/tq?tqx=out:csv&sheet=Invités` : null;
+
+      const { error: updateErr } = await supabase
+        .from("events")
+        .update({
+          google_sheet_url: sheetEditUrl,
+          signed_url: publicCsvUrl || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", event_id);
+      if (updateErr) console.warn("Warning updating event after sheet assign:", updateErr.message);
+
+      // 4) show link
+      publicUrlDiv.innerHTML = `
+        📊 Google Sheet créée : <br>
+        <a href="${sheetEditUrl}" target="_blank">${sheetEditUrl}</a>
+        ${publicCsvUrl ? `<br><code>${publicCsvUrl}</code>` : ""}
+      `;
+      alert("✅ Google Sheet assignée !");
+      loadUserUploads();
+
+    } catch (err) {
+      alert("❌ Erreur création Google Sheet : " + (err.message || err));
+    } finally {
+      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.disabled = false;
+    }
   }
 };
 
@@ -380,7 +456,7 @@ const syncBtn = document.getElementById("syncSheets");
 syncBtn.onclick = async () => {
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
-  if (!accessToken) return alert("Connecte-toi.");
+  if (!accessToken) return alert("❌ Connecte-toi.");
 
   syncBtn.textContent = "Sync...";
   syncBtn.disabled = true;
@@ -397,10 +473,10 @@ syncBtn.onclick = async () => {
       }
     );
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert(`Sync OK : ${data.count} sheets sync.`);
+    if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+    alert(`✅ Sync terminée : ${data.count || 0} sheets mises à jour.`);
   } catch (err) {
-    alert("Erreur sync: " + err.message);
+    alert("❌ Sync error : " + err.message);
   } finally {
     syncBtn.textContent = "Sync Sheets Pool";
     syncBtn.disabled = false;
@@ -415,21 +491,20 @@ document.getElementById("folder-test").onclick = async () => {
   const accessToken = session.data.session?.access_token;
   if (!accessToken) return alert("Connecte-toi.");
 
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/folder-test`,
-    {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/folder-test`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json"
       }
-    }
-  );
-
-  const data = await res.json();
-  if (!res.ok) return alert("Erreur : " + data.error);
-
-  alert(`Dossier créé : ${data.name} – ID : ${data.id}`);
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+    alert(`✅ Dossier créé : ${data.name} (ID: ${data.id})`);
+  } catch (err) {
+    alert("Erreur folder-test: " + (err.message || err));
+  }
 };
 
 /* ----------------------------
@@ -439,23 +514,22 @@ document.getElementById("listFolderBtn").onclick = async () => {
   const resultBox = document.getElementById("folderResult");
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
-  if (!accessToken) return resultBox.textContent = "Connecte-toi.";
+  if (!accessToken) return resultBox.textContent = "❌ Connecte-toi.";
 
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/list-folder`,
-    {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/list-folder`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json"
       }
-    }
-  );
-
-  const data = await res.json();
-  if (!res.ok) return resultBox.textContent = "Erreur: " + JSON.stringify(data);
-
-  resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+    resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
+  } catch (err) {
+    resultBox.textContent = `❌ Erreur fetch : ${err.message || err}`;
+  }
 };
 
 /* ----------------------------
@@ -476,7 +550,7 @@ async function loadUserUploads() {
   container.innerHTML = "";
 
   if (!events?.length) {
-    container.textContent = "Aucun événement.";
+    container.textContent = "Vous n'avez aucun événement pour l'instant.";
     return;
   }
 
@@ -492,6 +566,9 @@ async function loadUserUploads() {
 
     const title = document.createElement("h4");
     title.textContent = e.username;
+    title.style.margin = "0";
+    title.style.fontFamily = "'Playfair Display', serif";
+    title.style.color = "#2e1f17";
     card.appendChild(title);
 
     const date = document.createElement("div");
@@ -499,7 +576,7 @@ async function loadUserUploads() {
     date.style.fontSize = "0.9rem";
     card.appendChild(date);
 
-    // CSV
+    // CSV download / signed
     const csvLink = document.createElement("a");
     csvLink.textContent = "Télécharger CSV";
     csvLink.style.display = "inline-block";
@@ -512,39 +589,54 @@ async function loadUserUploads() {
     csvLink.style.fontWeight = "600";
     csvLink.style.fontSize = "0.9rem";
 
-    if (!e.is_private) {
-      csvLink.href =
-        `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+    if (!e.is_private && e.signed_url === null) {
+      // public CSV file
+      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.target = "_blank";
+    } else if (e.signed_url) {
+      // could be public CSV URL or google sheet csv export
+      csvLink.href = e.signed_url;
       csvLink.target = "_blank";
     } else {
+      // private — need to request signed url
+      csvLink.href = "#";
       csvLink.onclick = async () => {
-        const session = await supabase.auth.getSession();
-        const userId = session.data.session.user.id;
-        const signedUrl = await getPrivateCsv(
-          e.username,
-          e.event_password,
-          userId
-        );
-        window.open(signedUrl, "_blank");
+        try {
+          const session = await supabase.auth.getSession();
+          const userId = session.data.session?.user.id;
+          const signedUrl = await getPrivateCsv(e.username, e.event_password, userId);
+          window.open(signedUrl, "_blank");
+        } catch (err) {
+          alert("Erreur récupération CSV privé: " + (err.message || err));
+        }
       };
     }
     card.appendChild(csvLink);
 
-    // EVENT LINK
+    // Event link
     const link = document.createElement("a");
-    link.href =
-      `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
+    link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
     link.textContent = "Lien événement";
-    link.target = "_blank";
+    link.style.display = "inline-block";
+    link.style.padding = "0.4rem 0.6rem";
+    link.style.background = "#f5eee5";
+    link.style.border = "1px solid #d0bfae";
+    link.style.borderRadius = "6px";
+    link.style.textDecoration = "none";
+    link.style.color = "#3e2f27";
+    link.style.fontWeight = "600";
+    link.style.fontSize = "0.9rem";
     link.style.marginTop = "0.5rem";
+    link.target = "_blank";
     card.appendChild(link);
 
-    // GOOGLE SHEET LINK
+    // Google Sheet link
     if (e.google_sheet_url) {
       const sheetLink = document.createElement("a");
       sheetLink.href = e.google_sheet_url;
       sheetLink.textContent = "📊 Google Sheet";
       sheetLink.target = "_blank";
+      sheetLink.style.display = "inline-block";
       sheetLink.style.marginTop = "0.5rem";
       card.appendChild(sheetLink);
     }
