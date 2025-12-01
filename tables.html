@@ -70,46 +70,52 @@ async function loadEvent(username) {
     return;
   }
 
-  // Charger mapping images
   imagesMapping = data.images_mapping || {};
 
-  if (data.is_private) {
-  // Récupérer CSV privé via signed URL
+  const publicJsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
+
+  // ⭐ NEW — test si le JSON public existe
+  let publicJsonExists = false;
+  try {
+    const test = await fetch(publicJsonUrl, { method: "HEAD" });
+    publicJsonExists = test.ok;
+  } catch (_) {}
+
+  // 🎯 CAS PUBLIC (CSV ou Google Sheet public)
+  if (!data.is_private) {
+    if (publicJsonExists) {
+      guests = await fetch(publicJsonUrl).then(r => r.json());
+      fillDatalist();
+      return;
+    }
+    resultEl.textContent = "Erreur : fichier public introuvable.";
+    return;
+  }
+
+  // 🎯 CAS PRIVÉ (CSV privé ou Google Sheet privé avant/après sync)
   const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
   if (!pwd || pwd !== data.event_password) {
     resultEl.textContent = "❌ Mot de passe incorrect.";
     return;
   }
+
   try {
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (!userId) throw new Error("Utilisateur non connecté");
 
+    // ⭐ NEW — si Google Sheet privé a été sync → JSON n'existe PAS mais CSV privé OUI
     const signedUrl = await getPrivateCsv(username, pwd, userId);
+
     const csvText = await fetch(signedUrl).then(r => r.text());
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
     guests = parsed.data;
     fillDatalist();
-    console.log("✅ Invités chargés (CSV privé) :", guests.length);
+    console.log("Invités chargés (CSV privé ou sync)");
   } catch(e) {
     console.error(e);
     resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
   }
-} else {
-  // Événement public → charger JSON depuis public-guests
-  const jsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
-  try {
-    const res = await fetch(jsonUrl);
-    if (!res.ok) throw new Error("Impossible de charger le fichier JSON public.");
-    guests = await res.json();
-    fillDatalist();
-    console.log("✅ Invités chargés (JSON public) :", guests.length);
-  } catch(e) {
-    console.error(e);
-    resultEl.textContent = "Erreur chargement JSON public : " + e.message;
-  }
-}
-
 }
 
 function normalize(str) {
