@@ -88,6 +88,24 @@ async function loadEvent(username) {
       fillDatalist();
       return;
     }
+  else if (data.google_sheet_public_url) {
+  try {
+    const sheetCsvUrl = data.google_sheet_public_url.replace("/edit#gid=", "/export?format=csv&gid=");
+    const csvText = await fetch(sheetCsvUrl).then(r => {
+      if (!r.ok) throw new Error("Impossible de charger la Google Sheet publique.");
+      return r.text();
+    });
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    guests = parsed.data.filter(g => g.name); // filtrer lignes vides
+    fillDatalist();
+    console.log("✅ Invités chargés depuis Google Sheet publique :", guests.length);
+    return; 
+  } catch(e) {
+    console.error(e);
+    resultEl.textContent = "Erreur chargement Google Sheet publique : " + e.message;
+    return;
+  }
+}
     resultEl.textContent = "Erreur : fichier public introuvable.";
     return;
   }
