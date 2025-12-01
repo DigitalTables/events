@@ -88,7 +88,7 @@ async function loadEvent(username) {
       fillDatalist();
       return;
     }
-  else if (data.google_sheet_public_url) {
+  else if (data.google_sheet_url) {
   try {
     const sheetCsvUrl = data.google_sheet_public_url.replace("/edit#gid=", "/export?format=csv&gid=");
     const csvText = await fetch(sheetCsvUrl).then(r => {
