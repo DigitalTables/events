@@ -90,7 +90,7 @@ async function loadEvent(username) {
     }
   else if (data.google_sheet_url) {
   try {
-    const sheetCsvUrl = data.google_sheet_public_url.replace("/edit#gid=", "/export?format=csv&gid=");
+    const sheetCsvUrl = data.google_sheet_url.replace("/edit#gid=", "/export?format=csv&gid=");
     console.log("url google sheet: ",sheetCsvUrl);
     const csvText = await fetch(sheetCsvUrl).then(r => {
       if (!r.ok) throw new Error("Impossible de charger la Google Sheet publique.");
