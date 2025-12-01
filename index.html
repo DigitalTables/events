@@ -667,7 +667,8 @@ syncOneBtn.onclick = async () => {
                 body: JSON.stringify({
                     event_id: e.id,
                     username: e.username,
-                    google_sheet_url: e.google_sheet_url
+                    google_sheet_url: e.google_sheet_url,
+                  password: e.event_password
                 })
             }
         );
