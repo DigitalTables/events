@@ -90,7 +90,10 @@ async function loadEvent(username) {
     }
   else if (data.google_sheet_url) {
   try {
-    const sheetCsvUrl = data.google_sheet_url.replace("/edit#gid=", "/export?format=csv&gid=");
+    const sheetIdMatch = data.google_sheet_url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+const sheetId = sheetIdMatch ? sheetIdMatch[1] : null;
+const sheetCsvUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0` : null;
+if (!sheetCsvUrl) throw new Error("Impossible de générer l'URL CSV depuis la Google Sheet.");
     console.log("url google sheet: ",sheetCsvUrl);
     const csvText = await fetch(sheetCsvUrl).then(r => {
       if (!r.ok) throw new Error("Impossible de charger la Google Sheet publique.");
