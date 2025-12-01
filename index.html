@@ -72,17 +72,14 @@
   <br>
   <button id="send">Envoyer CSV</button>
   <button id="createSheet">Créer Google Sheet</button>
-  <button id="createSheetCore">Créer Google Sheet Core</button>
   <button id="syncSheets">Sync Sheets Pool</button>
-<button id="folder-test">Test folder</button>
+  <button id="folder-test">Test folder</button>
   <button id="listFolderBtn">List Folder</button>
 
-  
   <div id="publicUrl" style="margin-top:1rem; font-size:0.9rem; word-break:break-all;"></div>
 </div>
 
-  <div id="folderResult"></div>
-
+<div id="folderResult"></div>
 
 <!-- Section Dashboard -->
 <div id="dashboard" style="display:none; margin-top:3rem; padding: 0 2rem;">
@@ -97,10 +94,15 @@
 </footer>
 
 <script type="module">
-import { supabase,SUPABASE_URL, getPrivateCsv } from './supabase.js';
-import { googleSignInPopup } from "./google-oauth.js";
+/* ----------------------------
+   IMPORTS SUPABASE + OAUTH
+---------------------------- */
+import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
+/* ----------------------------
+   DOM ELEMENTS
+---------------------------- */
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
 const logoutBtn = document.getElementById("logout");
@@ -110,7 +112,6 @@ const signup = document.getElementById("signup");
 const login = document.getElementById("login");
 const sendBtn = document.getElementById("send");
 const createSheetBtn = document.getElementById("createSheet");
-const createSheetCoreBtn = document.getElementById("createSheetCore");
 const csvInput = document.getElementById("guests");
 const usernameInput = document.getElementById("username");
 const usernameStatus = document.getElementById("usernameStatus");
@@ -118,17 +119,20 @@ const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
 const publicUrlDiv = document.getElementById("publicUrl");
-
 const tableImageRows = document.getElementById("tableImageRows");
 const addTableImageRowBtn = document.getElementById("addTableImageRow");
 const dashboardDiv = document.getElementById("dashboard");
 
-// Toggle mot de passe si privé
+/* ----------------------------
+   TOGGLE PASSWORD IF PRIVATE
+---------------------------- */
 privateCsvCheckbox.addEventListener("change", () => {
   passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
 });
 
-// Connexion / déconnexion
+/* ----------------------------
+   LOGIN / LOGOUT
+---------------------------- */
 function onLogin() {
   authDiv.style.display = "none";
   uploadDiv.style.display = "block";
@@ -149,7 +153,9 @@ logoutBtn.onclick = async () => {
   onLogout();
 };
 
-// Vérifie si déjà connecté
+/* ----------------------------
+   AUTH STATUS CHECK
+---------------------------- */
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) onLogin();
   else onLogout();
@@ -159,37 +165,55 @@ supabase.auth.onAuthStateChange((_event, session) => {
   else onLogout();
 });
 
-// Authentification simplifiée
+/* ----------------------------
+   SIGNUP / LOGIN
+---------------------------- */
 signup.onclick = async () => {
-  const { data, error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
   if (error) return alert("Erreur : " + error.message);
-  const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+
+  const { error: loginError } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
   if (loginError) return alert("Erreur login : " + loginError.message);
+
   onLogin();
-  alert("✅ Compte créé et connecté !");
+  alert("Compte créé et connecté !");
 };
 login.onclick = async () => {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
   if (error) alert("Erreur : " + error.message);
   else onLogin();
 };
 
-// Vérifie si un pseudo est déjà utilisé
+/* ----------------------------
+   CHECK USERNAME EXISTENCE
+---------------------------- */
 async function checkPublicJsonExists(username) {
-  const { data, error } = await supabase.storage.from("public-guests").list("", { search: `guests_${username}.json` });
+  const { data, error } = await supabase.storage
+    .from("public-guests")
+    .list("", { search: `guests_${username}.json` });
   if (error) return false;
   return data.some(f => f.name === `guests_${username}.json`);
 }
-
 usernameInput.addEventListener("blur", async () => {
   const username = usernameInput.value.trim();
-  if (!username) { usernameStatus.textContent = ""; return; }
+  if (!username) return usernameStatus.textContent = "";
   const exists = await checkPublicJsonExists(username);
-  usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé" : "✅ Disponible";
+  usernameStatus.textContent = exists ? "❌ Pseudo déjà utilisé" : "Disponible ✔";
   usernameStatus.style.color = exists ? "red" : "green";
 });
 
-// Gestion des lignes table → image
+/* ----------------------------
+   ADD TABLE → IMAGE ROW
+---------------------------- */
 function addTableImageRow() {
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
@@ -203,67 +227,65 @@ function addTableImageRow() {
 }
 addTableImageRowBtn.addEventListener("click", addTableImageRow);
 
-// ---- UPLOAD CSV ----
+/* ----------------------------
+   UPLOAD CSV + IMAGES
+---------------------------- */
 sendBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
-  if (!user) return alert("❌ Tu dois être connecté.");
+  if (!user) return alert("Connecte-toi.");
 
   const username = usernameInput.value.trim();
-  if (!username) return alert("❌ Choisis un identifiant public.");
+  if (!username) return alert("Choisis un identifiant.");
 
   const isPrivate = privateCsvCheckbox.checked;
   const eventPassword = eventPasswordInput.value.trim();
-  if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
+  if (isPrivate && !eventPassword) return alert("Mot de passe requis.");
 
   const csvFile = csvInput.files[0];
-  if (!csvFile) return alert("❌ Choisis un fichier CSV.");
+  if (!csvFile) return alert("Choisis un CSV.");
   const text = await csvFile.text();
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
   const rows = parsed.data;
 
-  // Upload CSV
+  // Upload CSV dans bucket "guests"
   const csvPath = `guests_${username}.csv`;
-  const { error: csvUpErr } = await supabase.storage.from("guests").upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
-  if (csvUpErr) return alert("Erreur upload CSV: " + csvUpErr.message);
+  const { error: csvUpErr } = await supabase.storage
+    .from("guests")
+    .upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
+  if (csvUpErr) return alert("Erreur CSV: " + csvUpErr.message);
 
   // Images mapping
   const imagesMapping = {};
-  const tableImageDivs = tableImageRows.querySelectorAll("div");
-  for (const div of tableImageDivs) {
+  const divs = tableImageRows.querySelectorAll("div");
+  for (const div of divs) {
     const tableName = div.querySelector("input[type='text']").value.trim();
     const imgFile = div.querySelector("input[type='file']").files[0];
     if (!tableName || !imgFile) continue;
-
-    const safeFileName = imgFile.name
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const cleanName = imgFile.name.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "_");
-
-    const imgPath = `${username}/tables/${safeFileName}`;
-    const { error: imgErr } = await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
-    if (imgErr) return alert("Erreur upload image: " + imgErr.message);
-
+    const imgPath = `${username}/tables/${cleanName}`;
+    await supabase.storage.from("images").upload(imgPath, imgFile, { upsert: true });
     imagesMapping[tableName] = imgPath;
   }
 
-  // Upload public JSON si nécessaire
   let publicOrSignedUrl = null;
   if (!isPrivate) {
-    const publicJsonName = `guests_${username}.json`;
-    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-    const { error: jsonUpErr } = await supabase.storage.from("public-guests").upload(publicJsonName, jsonBlob, { upsert: true });
-    if (jsonUpErr) return alert("Erreur upload JSON: " + jsonUpErr.message);
-    publicOrSignedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJsonName}`;
+    const publicJson = `guests_${username}.json`;
+    const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], {
+      type: "application/json"
+    });
+    await supabase.storage.from("public-guests")
+      .upload(publicJson, jsonBlob, { upsert: true });
+    publicOrSignedUrl =
+      `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJson}`;
   } else {
-    try {
-      const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
-      publicOrSignedUrl = signedUrl;
-    } catch(e) {
-      return alert("Erreur génération URL signée pour le CSV privé: " + e.message);
-    }
+    const signedUrl = await getPrivateCsv(username, eventPassword, user.id);
+    publicOrSignedUrl = signedUrl;
   }
 
-  // Enregistrer l’événement + mapping images
+  // Upsert event
   const { error: upsertErr } = await supabase.from("events").upsert({
     username,
     event_password: isPrivate ? eventPassword : null,
@@ -273,163 +295,99 @@ sendBtn.onclick = async () => {
     uploaded_at: new Date(),
     images_mapping: imagesMapping
   }, { onConflict: "username" });
-  if (upsertErr) return alert("Erreur enregistrement événement: " + upsertErr.message);
+  if (upsertErr) return alert("Erreur upsert: " + upsertErr.message);
 
-  // Afficher le lien
-  const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
-  publicUrlDiv.innerHTML = isPrivate
-    ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
-    : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+  const eventUrl =
+    `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
+  publicUrlDiv.innerHTML =
+    isPrivate
+      ? `🔒 Privé :<br><a href="${eventUrl}" target="_blank">${eventUrl}</a>`
+      : `🌍 Public :<br><a href="${eventUrl}" target="_blank">${eventUrl}</a><br>${publicOrSignedUrl}`;
 
-  alert("✅ Upload terminé !");
+  alert("Upload terminé !");
   loadUserUploads();
 };
 
-// ---- CRÉER GOOGLE SHEET ----
+/* ----------------------------
+   CRÉER UNE GOOGLE SHEET
+---------------------------- */
 createSheetBtn.onclick = async () => {
-  try {
-    // Étape 1 : Popup OAuth Google
-    const accessToken = await googleSignInPopup();
-    console.log("OAuth OK, token=", accessToken);
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("Connecte-toi.");
 
-    // Étape 2 : Création Google Sheet
-    const sheetRes = await fetch(
-      "https://sheets.googleapis.com/v4/spreadsheets",
+  const username = usernameInput.value.trim();
+  if (!username) return alert("Choisis un identifiant public.");
+
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+
+  // 🔍 Récupérer l’événement (pour event_id, is_private)
+  const { data: ev } = await supabase
+    .from("events")
+    .select("id, is_private")
+    .eq("username", username)
+    .single();
+  if (!ev) return alert("Événement introuvable, upload CSV d’abord.");
+
+  createSheetBtn.textContent = "Assignation...";
+  createSheetBtn.disabled = true;
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          properties: {
-            title: "DigitalTables - Event"
-          },
-          sheets: [
-            {
-              properties: { title: "Invités" },
-              data: [
-                {
-                  rowData: [
-                    {
-                      values: [
-                        { userEnteredValue: { stringValue: "name" } },
-                        { userEnteredValue: { stringValue: "table" } },
-                        { userEnteredValue: { stringValue: "message" } }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          username,
+          user_id: user.id,
+          event_id: ev.id,
+          is_public_event: !ev.is_private
         })
       }
     );
 
-    if (!sheetRes.ok) {
-      console.error(await sheetRes.text());
-      throw new Error("Erreur création Google Sheet");
-    }
-
-    const sheetData = await sheetRes.json();
-    const spreadsheetId = sheetData.spreadsheetId;
-
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
-
-    // Étape 3 : Sauvegarde dans Supabase
-    const { data: eventData, error } = await supabase
-      .from("events")
-      .update({ google_sheet_url: sheetUrl })
-      .eq("username", usernameInput.value.trim());
-
-    if (error) throw error;
-
-    alert("Google Sheet créée !");
-    window.open(sheetUrl, "_blank");
-
-  } catch (err) {
-    console.error(err);
-    alert("Erreur : " + err.message);
-  }
-};
-
-
-
-// ---- CRÉER GOOGLE SHEET Core Function ----
-createSheetCoreBtn.onclick = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return alert("❌ Tu dois être connecté.");
-
-  const username = usernameInput.value.trim();
-  if (!username) return alert("❌ Choisis un identifiant public.");
-
-  const session = await supabase.auth.getSession();
-  const accessToken = session.data.session?.access_token;
-
-  createSheetCoreBtn.textContent = "Assignation en cours...";
-  createSheetCoreBtn.disabled = true;
-
-  try {
-   const res = await fetch(
-  `${SUPABASE_URL}/functions/v1/assign-google-sheetCore`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      username,
-      user_id: user.id
-    })
-  }
-);
-
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
 
-    if (!res.ok) throw new Error(data.error || "Erreur assignation");
+    const sheetUrl =
+      `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
 
-    // 🔥 Affichage direct du lien Google Sheet
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
-
-    alert(`✅ Google Sheet assignée !`);
+    alert("Google Sheet assignée !");
     publicUrlDiv.innerHTML += `
       <br><br>
-      📊 Google Sheet liée :
+      📊 Google Sheet :
       <a href="${sheetUrl}" target="_blank">${sheetUrl}</a>
     `;
 
-    // Mise à jour de la DB locale affichée
     loadUserUploads();
-
   } catch (err) {
-    console.error(err);
-    alert("❌ Erreur assignation : " + err.message);
+    alert("Erreur assignation: " + err.message);
   } finally {
-    createSheetCoreBtn.textContent = "Créer Google Sheet Core";
-    createSheetCoreBtn.disabled = false;
+    createSheetBtn.textContent = "Créer Google Sheet";
+    createSheetBtn.disabled = false;
   }
 };
 
-    
-//Sync folder google sheet and database
-  const syncBtn = document.getElementById("syncSheets");
-
+/* ----------------------------
+   SYNC SHEETS POOL
+---------------------------- */
+const syncBtn = document.getElementById("syncSheets");
 syncBtn.onclick = async () => {
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
-
-  if (!accessToken) return alert("❌ Connecte-toi d'abord.");
+  if (!accessToken) return alert("Connecte-toi.");
 
   syncBtn.textContent = "Sync...";
   syncBtn.disabled = true;
 
   try {
     const res = await fetch(
-      "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/sync-google-sheets-pool`),
+      `${SUPABASE_URL}/functions/v1/sync-google-sheets-pool`,
       {
         method: "POST",
         headers: {
@@ -438,128 +396,71 @@ syncBtn.onclick = async () => {
         }
       }
     );
-
     const data = await res.json();
-
-    if (!res.ok) {
-  console.error("SYNC RAW ERROR:", data);
-  throw new Error(data.error || JSON.stringify(data));
-}
-
-
-    alert("✅ Sync terminée : " + data.count + " sheets mises à jour.");
-    
+    if (!res.ok) throw new Error(data.error);
+    alert(`Sync OK : ${data.count} sheets sync.`);
   } catch (err) {
-    alert("❌ Sync error : " + err.message);
+    alert("Erreur sync: " + err.message);
   } finally {
     syncBtn.textContent = "Sync Sheets Pool";
     syncBtn.disabled = false;
   }
 };
 
-
-  
-
-  
-//Folder test
-  const folderTestBtn = document.getElementById("folder-test");
-
-folderTestBtn.onclick = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return alert("❌ Tu dois être connecté.");
-
+/* ----------------------------
+   FOLDER TEST
+---------------------------- */
+document.getElementById("folder-test").onclick = async () => {
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
-  if (!accessToken) return alert("❌ Token introuvable, reconnecte-toi.");
+  if (!accessToken) return alert("Connecte-toi.");
 
-  try {
-    const res = await fetch(
-      "https://corsproxy.io/?" +
-      encodeURIComponent(`${SUPABASE_URL}/functions/v1/folder-test`),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({})
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/folder-test`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
       }
-    );
+    }
+  );
 
-    const data = await res.json();
-    if (!res.ok || data.error)
-      return alert("❌ Erreur création Dossier : " + (data.error || "inconnue"));
+  const data = await res.json();
+  if (!res.ok) return alert("Erreur : " + data.error);
 
-    alert(`✅ Dossier créé !\nID : ${data.id}\nNom : ${data.name}\nOwner : ${data.owner}`);
-
-  } catch (err) {
-    alert("Erreur fetch : " + err.message);
-  }
+  alert(`Dossier créé : ${data.name} – ID : ${data.id}`);
 };
 
-
-
-// ---- LIST FOLDER ----
-
-const listFolderBtn = document.getElementById("listFolderBtn");
-const resultBox = document.getElementById("folderResult");
-
-listFolderBtn.addEventListener("click", listFolder);
-
-async function listFolder() {
-
-  // 🔥 Récupérer utilisateur (obligatoire)
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-
-  if (!user) {
-    resultBox.textContent = "❌ Tu dois être connecté.";
-    return;
-  }
-
+/* ----------------------------
+   LIST FOLDER
+---------------------------- */
+document.getElementById("listFolderBtn").onclick = async () => {
+  const resultBox = document.getElementById("folderResult");
   const session = await supabase.auth.getSession();
   const accessToken = session.data.session?.access_token;
+  if (!accessToken) return resultBox.textContent = "Connecte-toi.";
 
-  if (!accessToken) {
-    resultBox.textContent = "❌ Token introuvable, reconnecte-toi.";
-    return;
-  }
-
-  try {
-    const res = await fetch(
-      "https://corsproxy.io/?" +
-        encodeURIComponent(`${SUPABASE_URL}/functions/v1/list-folder`),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        }
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/list-folder`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
       }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      resultBox.textContent = `❌ Erreur : ${JSON.stringify(data, null, 2)}`;
-      return;
     }
+  );
 
-    // Si aucun dossier
-    if (!data.files || data.files.length === 0) {
-      resultBox.innerHTML = "<p>Aucun dossier trouvé.</p>";
-      return;
-    }
+  const data = await res.json();
+  if (!res.ok) return resultBox.textContent = "Erreur: " + JSON.stringify(data);
 
-    // JSON brut dans un <pre> pour conserver la mise en forme
-    resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
+  resultBox.innerHTML = `<pre>${JSON.stringify(data.files, null, 2)}</pre>`;
+};
 
-  } catch (err) {
-    resultBox.textContent = `❌ Erreur fetch : ${err.message}`;
-  }
-}
-// Dashboard
+/* ----------------------------
+   DASHBOARD
+---------------------------- */
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -569,12 +470,13 @@ async function loadUserUploads() {
     .from("events")
     .select("*")
     .eq("user_id", user.id)
-    .order('uploaded_at', { ascending: false });
+    .order("uploaded_at", { ascending: false });
 
   const container = document.getElementById("eventsContainer");
   container.innerHTML = "";
-  if (!events || events.length === 0) {
-    container.textContent = "Vous n'avez aucun événement pour l'instant.";
+
+  if (!events?.length) {
+    container.textContent = "Aucun événement.";
     return;
   }
 
@@ -590,9 +492,6 @@ async function loadUserUploads() {
 
     const title = document.createElement("h4");
     title.textContent = e.username;
-    title.style.margin = "0";
-    title.style.fontFamily = "'Playfair Display', serif";
-    title.style.color = "#2e1f17";
     card.appendChild(title);
 
     const date = document.createElement("div");
@@ -614,45 +513,38 @@ async function loadUserUploads() {
     csvLink.style.fontSize = "0.9rem";
 
     if (!e.is_private) {
-      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.href =
+        `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
       csvLink.target = "_blank";
     } else {
-      csvLink.href = "#";
       csvLink.onclick = async () => {
-        try {
-          const signedUrl = await getPrivateCsv(e.username, e.event_password, user.id);
-          window.open(signedUrl, "_blank");
-        } catch(err) {
-          alert("Erreur récupération CSV privé: "+err.message);
-        }
+        const session = await supabase.auth.getSession();
+        const userId = session.data.session.user.id;
+        const signedUrl = await getPrivateCsv(
+          e.username,
+          e.event_password,
+          userId
+        );
+        window.open(signedUrl, "_blank");
       };
     }
     card.appendChild(csvLink);
 
-    // Lien complet
+    // EVENT LINK
     const link = document.createElement("a");
-    link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
+    link.href =
+      `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
     link.textContent = "Lien événement";
-    link.style.display = "inline-block";
-    link.style.padding = "0.4rem 0.6rem";
-    link.style.background = "#f5eee5";
-    link.style.border = "1px solid #d0bfae";
-    link.style.borderRadius = "6px";
-    link.style.textDecoration = "none";
-    link.style.color = "#3e2f27";
-    link.style.fontWeight = "600";
-    link.style.fontSize = "0.9rem";
-    link.style.marginTop = "0.5rem";
     link.target = "_blank";
+    link.style.marginTop = "0.5rem";
     card.appendChild(link);
 
-    // ✅ Lien Google Sheet (si disponible)
+    // GOOGLE SHEET LINK
     if (e.google_sheet_url) {
       const sheetLink = document.createElement("a");
       sheetLink.href = e.google_sheet_url;
       sheetLink.textContent = "📊 Google Sheet";
       sheetLink.target = "_blank";
-      sheetLink.style.display = "inline-block";
       sheetLink.style.marginTop = "0.5rem";
       card.appendChild(sheetLink);
     }
@@ -661,5 +553,6 @@ async function loadUserUploads() {
   });
 }
 </script>
+
 </body>
 </html>
