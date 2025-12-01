@@ -656,7 +656,8 @@ syncOneBtn.onclick = async () => {
 
     try {
         const res = await fetch(
-            `${SUPABASE_URL}/functions/v1/sync-private-googlesheet`,
+            `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+           
             {
                 method: "POST",
                 headers: {
