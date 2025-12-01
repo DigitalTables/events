@@ -684,7 +684,7 @@ syncOneBtn.onclick = async () => {
   if (e.updated_at) {
     const syncInfo = document.createElement("div");
     syncInfo.textContent = "🔄 Dernière sync : " +
-        new Date(e.last_sync_at).toLocaleString();
+        new Date(e.updated_at).toLocaleString();
     syncInfo.style.fontSize = "0.85rem";
     syncInfo.style.color = "#444";
     card.appendChild(syncInfo);
