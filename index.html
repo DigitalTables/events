@@ -555,6 +555,7 @@ async function loadUserUploads() {
   }
 
   events.forEach(e => {
+
     const card = document.createElement("div");
     card.style.background = "rgba(255,255,255,0.8)";
     card.style.borderRadius = "12px";
@@ -576,7 +577,9 @@ async function loadUserUploads() {
     date.style.fontSize = "0.9rem";
     card.appendChild(date);
 
-    // CSV download / signed
+    //
+    // ⬇️ CSV DOWNLOAD / SIGNED
+    //
     const csvLink = document.createElement("a");
     csvLink.textContent = "Télécharger CSV";
     csvLink.style.display = "inline-block";
@@ -590,15 +593,15 @@ async function loadUserUploads() {
     csvLink.style.fontSize = "0.9rem";
 
     if (!e.is_private && e.signed_url === null) {
-      // public CSV file
-      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/guests/guests_${e.username}.csv`;
+      csvLink.href = `${SUPABASE_URL}/storage/v1/object/public/public-guests/guests_${e.username}.csv`;
       csvLink.target = "_blank";
+
     } else if (e.signed_url) {
-      // could be public CSV URL or google sheet csv export
       csvLink.href = e.signed_url;
       csvLink.target = "_blank";
+
     } else {
-      // private — need to request signed url
+      // PRIVÉ → génération d'URL signée
       csvLink.href = "#";
       csvLink.onclick = async () => {
         try {
@@ -613,7 +616,9 @@ async function loadUserUploads() {
     }
     card.appendChild(csvLink);
 
-    // Event link
+    //
+    // 🔗 Lien vers l’événement
+    //
     const link = document.createElement("a");
     link.href = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(e.username)}`;
     link.textContent = "Lien événement";
@@ -630,7 +635,9 @@ async function loadUserUploads() {
     link.target = "_blank";
     card.appendChild(link);
 
-    // Google Sheet link
+    //
+    // 📊 Google Sheet link
+    //
     if (e.google_sheet_url) {
       const sheetLink = document.createElement("a");
       sheetLink.href = e.google_sheet_url;
@@ -641,63 +648,87 @@ async function loadUserUploads() {
       card.appendChild(sheetLink);
     }
 
-// Si e.google_sheet_url existe ET e.is_private == true
-    if (e.google_sheet_url && e.is_private == true ) {
-const syncOneBtn = document.createElement("button");
-syncOneBtn.textContent = "Sync CSV privé";
-syncOneBtn.style.marginTop = "0.5rem";
-syncOneBtn.onclick = async () => {
-    const session = await supabase.auth.getSession();
-    const accessToken = session.data.session?.access_token;
-    if (!accessToken) return alert("❌ Connecte-toi.");
+    //
+    // 🔄 SYNC BUTTON — PRIVATE ONLY
+    //
+    if (e.google_sheet_url && e.is_private) {
 
-    syncOneBtn.textContent = "Sync...";
-    syncOneBtn.disabled = true;
+      const syncOneBtn = document.createElement("button");
+      syncOneBtn.textContent = "Sync CSV privé";
+      syncOneBtn.style.marginTop = "0.5rem";
 
-    try {
-        const res = await fetch(
+      syncOneBtn.onclick = async () => {
+
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) return alert("❌ Connecte-toi.");
+
+        syncOneBtn.textContent = "Sync...";
+        syncOneBtn.disabled = true;
+
+        try {
+          const res = await fetch(
             `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
-           
             {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    event_id: e.id,
-                    username: e.username,
-                    google_sheet_url: e.google_sheet_url,
-                  password: e.event_password
-                })
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                event_id: e.id,
+                username: e.username,
+                google_sheet_url: e.google_sheet_url,
+                password: e.event_password
+              })
             }
-        );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+          );
 
-        alert("✅ CSV privé synchronisé !");
-    } catch (err) {
-        alert("❌ Sync error : " + err.message);
-    } finally {
-        syncOneBtn.textContent = "Sync CSV privé";
-        syncOneBtn.disabled = false;
+          // certains retours ne sont pas JSON → protection
+          let data = {};
+          try {
+            const t = await res.text();
+            data = t ? JSON.parse(t) : {};
+          } catch {}
+
+          if (!res.ok) {
+            throw new Error(
+              data.error || data.message || "Unknown sync error"
+            );
+          }
+
+          alert("✅ CSV privé synchronisé !");
+        } catch (err) {
+          alert("❌ Sync error : " + err.message);
+        } finally {
+          syncOneBtn.textContent = "Sync CSV privé";
+          syncOneBtn.disabled = false;
+        }
+      };
+
+      card.appendChild(syncOneBtn);
+
+      //
+      // 🕒 Info dernière sync
+      //
+      if (e.updated_at) {
+        const syncInfo = document.createElement("div");
+        syncInfo.textContent =
+          "🔄 Dernière sync : " + new Date(e.updated_at).toLocaleString();
+        syncInfo.style.fontSize = "0.85rem";
+        syncInfo.style.color = "#444";
+        card.appendChild(syncInfo);
+      }
     }
-  if (e.updated_at) {
-    const syncInfo = document.createElement("div");
-    syncInfo.textContent = "🔄 Dernière sync : " +
-        new Date(e.updated_at).toLocaleString();
-    syncInfo.style.fontSize = "0.85rem";
-    syncInfo.style.color = "#444";
-    card.appendChild(syncInfo);
+
+    //
+    // FIN : on ajoute la carte au container
+    //
+    container.appendChild(card);
+
+  });
 }
 
-};
-card.appendChild(syncOneBtn);
-
-    }
-    
-    container.appendChild(card);
-  });
 }
 </script>
 
