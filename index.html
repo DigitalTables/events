@@ -702,6 +702,9 @@ syncOneBtn.type = "button";
           }
 
           alert("✅ CSV privé synchronisé !");
+         
+await loadUserUploads(); 
+
         } catch (err) {
           alert("❌ Sync error : " + err.message);
         } finally {
