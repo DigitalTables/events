@@ -653,7 +653,10 @@ async function loadUserUploads() {
     //
     if (e.google_sheet_url && e.is_private) {
 
+     
       const syncOneBtn = document.createElement("button");
+syncOneBtn.type = "button"; 
+
       syncOneBtn.textContent = "Sync CSV privé";
       syncOneBtn.style.marginTop = "0.5rem";
 
