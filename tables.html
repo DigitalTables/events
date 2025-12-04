@@ -195,14 +195,18 @@ function searchAndDisplay(input) {
 inputEl.addEventListener("input", e => searchAndDisplay(e.target.value));
 inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
 
-resultEl.addEventListener("click", e => {
+rresultEl.addEventListener("mousedown", e => {
   const name = e.target.dataset?.name;
-  if (name) {
-    inputEl.value = name;
-    const guest = guests.find(g => normalize(g.name) === normalize(name));
-    if (guest) showGuest(guest);
-  }
+  if (!name) return;
+
+  // Empêche le blur d'interrompre le clic
+  e.preventDefault();
+
+  inputEl.value = name;
+  const guest = guests.find(g => normalize(g.name) === normalize(name));
+  if (guest) showGuest(guest);
 });
+
 </script>
 </body>
 </html>
