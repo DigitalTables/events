@@ -648,102 +648,73 @@ async function loadUserUploads() {
       card.appendChild(sheetLink);
     }
 
-   // 🔄 SYNC BUTTON — PRIVATE ONLY
-if (e.google_sheet_url && e.is_private) {
+    //
+    // 🔄 SYNC BUTTON — PRIVATE ONLY
+    //
+    if (e.google_sheet_url && e.is_private) {
 
-  //
-  // 🕒 Création du bloc Dernière sync (toujours avant le bouton)
-  //
-  const syncInfo = document.createElement("div");
-  syncInfo.className = "last-sync";
-  syncInfo.textContent =
-    "🔄 Dernière sync : " +
-    (e.updated_at ? new Date(e.updated_at).toLocaleString() : "Jamais");
-  syncInfo.style.fontSize = "0.85rem";
-  syncInfo.style.color = "#444";
-  card.appendChild(syncInfo);
+     
+      const syncOneBtn = document.createElement("button");
+syncOneBtn.type = "button"; 
 
-  //
-  // 🔘 Bouton Sync
-  //
-  const syncOneBtn = document.createElement("button");
-  syncOneBtn.type = "button";
-  syncOneBtn.textContent = "Sync CSV privé";
-  syncOneBtn.style.marginTop = "0.5rem";
-
-  syncOneBtn.onclick = async () => {
-
-    const session = await supabase.auth.getSession();
-    const accessToken = session.data.session?.access_token;
-    if (!accessToken) return alert("❌ Connecte-toi.");
-
-    syncOneBtn.textContent = "Sync...";
-    syncOneBtn.disabled = true;
-
-    try {
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            event_id: e.id,
-            username: e.username,
-            google_sheet_url: e.google_sheet_url,
-            password: e.event_password
-          })
-        }
-      );
-
-      let data = {};
-      try {
-        const t = await res.text();
-        data = t ? JSON.parse(t) : {};
-      } catch {}
-
-      if (!res.ok) {
-        throw new Error(data.error || data.message || "Unknown sync error");
-      }
-
-      alert("✅ CSV privé synchronisé !");
-
-      //
-      // 🔁 REFRESH updated_at
-      //
-      const { data: freshEvent } = await supabase
-        .from("events")
-        .select("*")
-        .eq("username", e.username)
-        .maybeSingle()
-        .force();
-
-      if (freshEvent) {
-        syncInfo.textContent =
-          "🔄 Dernière sync : " +
-          new Date(freshEvent.updated_at).toLocaleString();
-      }
-
-    } catch (err) {
-      alert("❌ Sync error : " + err.message);
-    } finally {
       syncOneBtn.textContent = "Sync CSV privé";
-      syncOneBtn.disabled = false;
-    }
-  };
+      syncOneBtn.style.marginTop = "0.5rem";
 
-  card.appendChild(syncOneBtn);
-}
+      syncOneBtn.onclick = async () => {
+
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) return alert("❌ Connecte-toi.");
+
+        syncOneBtn.textContent = "Sync...";
+        syncOneBtn.disabled = true;
+
+        try {
+          const res = await fetch(
+            
+            `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                event_id: e.id,
+                username: e.username,
+                google_sheet_url: e.google_sheet_url,
+                password: e.event_password
+              })
+            }
+          );
+
+          // certains retours ne sont pas JSON → protection
+          let data = {};
+          try {
+            const t = await res.text();
+            data = t ? JSON.parse(t) : {};
+          } catch {}
+
+          if (!res.ok) {
+            throw new Error(
+              data.error || data.message || "Unknown sync error"
+            );
+          }
+
+          alert("✅ CSV privé synchronisé !");
+        } catch (err) {
+          alert("❌ Sync error : " + err.message);
+        } finally {
+          syncOneBtn.textContent = "Sync CSV privé";
+          syncOneBtn.disabled = false;
+        }
+      };
+
+      card.appendChild(syncOneBtn);
 
       //
       // 🕒 Info dernière sync
       //
-
-
-
-      
       if (e.updated_at) {
         const syncInfo = document.createElement("div");
         syncInfo.textContent =
