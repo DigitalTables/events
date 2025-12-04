@@ -702,6 +702,19 @@ syncOneBtn.type = "button";
           }
 
           alert("✅ CSV privé synchronisé !");
+          // Recharge l'événement à jour
+const { data: freshEvent } = await supabase
+  .from("events")
+  .select("*")
+  .eq("username", e.username)
+  .maybeSingle()
+  .force();
+
+if (freshEvent) {
+  syncInfo.textContent =
+    "🔄 Dernière sync : " + new Date(freshEvent.updated_at).toLocaleString();
+}
+
         } catch (err) {
           alert("❌ Sync error : " + err.message);
         } finally {
@@ -715,6 +728,10 @@ syncOneBtn.type = "button";
       //
       // 🕒 Info dernière sync
       //
+
+
+
+      
       if (e.updated_at) {
         const syncInfo = document.createElement("div");
         syncInfo.textContent =
