@@ -532,6 +532,13 @@ document.getElementById("listFolderBtn").onclick = async () => {
   }
 };
 
+function formatDateWithTimeZone(dateString) {
+  return new Date(dateString).toLocaleString(undefined, {
+    timeZoneName: "short" // ← affiche GMT, CET, etc.
+  });
+}
+
+  
 /* ----------------------------
    DASHBOARD
 ---------------------------- */
@@ -721,7 +728,8 @@ await loadUserUploads();
       if (e.updated_at) {
         const syncInfo = document.createElement("div");
         syncInfo.textContent =
-          "🔄 Dernière sync : " + new Date(e.updated_at).toLocaleString();
+          "🔄 Dernière sync : " +formatDateWithTimeZone(e.updated_at);
+
         syncInfo.style.fontSize = "0.85rem";
         syncInfo.style.color = "#444";
         card.appendChild(syncInfo);
