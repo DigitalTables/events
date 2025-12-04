@@ -195,7 +195,7 @@ function searchAndDisplay(input) {
 inputEl.addEventListener("input", e => searchAndDisplay(e.target.value));
 inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
 
-rresultEl.addEventListener("mousedown", e => {
+resultEl.addEventListener("mousedown", e => {
   const name = e.target.dataset?.name;
   if (!name) return;
 
