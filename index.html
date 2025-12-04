@@ -668,6 +668,7 @@ async function loadUserUploads() {
 
         try {
           const res = await fetch(
+            console.log("fetch");
             `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
             {
               method: "POST",
