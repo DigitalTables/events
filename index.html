@@ -756,6 +756,41 @@ deleteBtn.onclick = async () => {
 };
 card.appendChild(deleteBtn);
 
+    // ❌ Suppression définitive
+const deleteForeverBtn = document.createElement("button");
+deleteForeverBtn.textContent = "🔥 Supprimer définitivement";
+deleteForeverBtn.style.marginTop = "0.5rem";
+deleteForeverBtn.style.color = "white";
+deleteForeverBtn.style.background = "red";
+
+deleteForeverBtn.onclick = async () => {
+  if (!confirm("⚠️ SUPPRESSION DÉFINITIVE\nTout sera supprimé. Continuer ?")) return;
+  if (!confirm("💀 Dernière chance ! Es-tu sûr ?")) return;
+
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-event`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ event_id: e.id, username: e.username })
+  });
+
+  if (res.ok) {
+    alert("🔥 Événement totalement supprimé !");
+    loadUserUploads();
+  } else {
+    const err = await res.json();
+    alert("Erreur suppression complète : " + err.error);
+  }
+};
+
+card.appendChild(deleteForeverBtn);
+
+
   });
 
 }
