@@ -740,6 +740,20 @@ await loadUserUploads();
     // FIN : on ajoute la carte au container
     //
     container.appendChild(card);
+// 🗑️ Bouton suppression (soft delete)
+const deleteBtn = document.createElement("button");
+deleteBtn.textContent = "🗑️ Supprimer l'événement";
+deleteBtn.style.marginTop = "0.5rem";
+deleteBtn.onclick = async () => {
+  if (!confirm("Voulez-vous vraiment supprimer cet événement ?")) return;
+
+  const { error } = await supabase.rpc("soft_delete_event", { event_id: e.id });
+  if (error) return alert("Erreur suppression: " + error.message);
+  
+  alert("Événement supprimé !");
+  loadUserUploads();
+};
+card.appendChild(deleteBtn);
 
   });
 
