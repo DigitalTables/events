@@ -744,7 +744,16 @@ await loadUserUploads();
 // 🗑️ Bouton suppression (soft delete)
 const deleteBtn = document.createElement("button");
 deleteBtn.textContent = "🗑️ Supprimer l'événement";
-deleteBtn.style.marginTop = "0.5rem";
+deleteBtn.style.marginTop = "0.4rem";
+deleteBtn.style.fontSize = "0.8rem";
+deleteBtn.style.padding = "4px 8px";
+deleteBtn.style.border = "1px solid #ccc";
+deleteBtn.style.borderRadius = "4px";
+deleteBtn.style.background = "#f5f5f5";
+deleteBtn.style.color = "#555";
+deleteBtn.style.cursor = "pointer";
+deleteBtn.onmouseenter = () => deleteBtn.style.background = "#e7e7e7";
+deleteBtn.onmouseleave = () => deleteBtn.style.background = "#f5f5f5";
 deleteBtn.onclick = async () => {
   if (!confirm("Voulez-vous vraiment supprimer cet événement ?")) return;
 
@@ -759,9 +768,24 @@ card.appendChild(deleteBtn);
     // ❌ Suppression définitive
 const deleteForeverBtn = document.createElement("button");
 deleteForeverBtn.textContent = "🔥 Supprimer définitivement";
-deleteForeverBtn.style.marginTop = "0.5rem";
-deleteForeverBtn.style.color = "white";
-deleteForeverBtn.style.background = "red";
+deleteForeverBtn.style.marginTop = "0.2rem";
+deleteForeverBtn.style.fontSize = "0.75rem";
+deleteForeverBtn.style.padding = "3px 6px";
+deleteForeverBtn.style.border = "1px solid #e3c1c1";
+deleteForeverBtn.style.borderRadius = "4px";
+deleteForeverBtn.style.background = "#faf4f4";
+deleteForeverBtn.style.color = "#a55";
+deleteForeverBtn.style.cursor = "pointer";
+deleteForeverBtn.style.opacity = "0.8";
+
+deleteForeverBtn.onmouseenter = () => {
+  deleteForeverBtn.style.opacity = "1";
+  deleteForeverBtn.style.background = "#f1e2e2";
+};
+deleteForeverBtn.onmouseleave = () => {
+  deleteForeverBtn.style.opacity = "0.8";
+  deleteForeverBtn.style.background = "#faf4f4";
+};
 
 deleteForeverBtn.onclick = async () => {
   if (!confirm("⚠️ SUPPRESSION DÉFINITIVE\nTout sera supprimé. Continuer ?")) return;
