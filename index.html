@@ -328,7 +328,7 @@ createEventBtn.onclick = async () => {
         : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
       alert("✅ Événement créé via CSV !");
-      loadUserUploads();
+     loadUserUploads().then(enforceEventLimit);
 
     } catch (err) {
       alert("❌ Erreur création événement CSV : " + (err.message || err));
@@ -404,7 +404,7 @@ createEventBtn.onclick = async () => {
         ${publicCsvUrl ? `<br><code>${publicCsvUrl}</code>` : ""}
       `;
       alert("✅ Google Sheet assignée !");
-      loadUserUploads();
+      loadUserUploads().then(enforceEventLimit);
 
     } catch (err) {
       alert("❌ Erreur création Google Sheet : " + (err.message || err));
@@ -619,7 +619,7 @@ async function loadUserUploads() {
           if (!res.ok) throw new Error(data.error || "Unknown sync error");
 
           alert("✅ CSV privé synchronisé !");
-          await loadUserUploads();
+          await loadUserUploads().then(enforceEventLimit);
 
         } catch (err) {
           alert("❌ Sync error : " + err.message);
@@ -673,7 +673,7 @@ async function loadUserUploads() {
 
       if (res.ok) {
         alert("🔥 Événement totalement supprimé !");
-        loadUserUploads();
+        loadUserUploads().then(enforceEventLimit);
       } else {
         const err = await res.json();
         alert("Erreur suppression complète : " + err.error);
