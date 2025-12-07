@@ -164,8 +164,9 @@ function onLogin() {
   uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
   dashboardDiv.style.display = "block";
-  loadUserUploads();
+  loadUserUploads().then(enforceEventLimit);
 }
+
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
@@ -813,9 +814,34 @@ deleteForeverBtn.onclick = async () => {
 };
 
 card.appendChild(deleteForeverBtn);
-
+await enforceEventLimit();
 
   });
+async function enforceEventLimit() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  const hasEvent = events && events.length >= 1;
+
+  const createEventBtn = document.getElementById("createEventBtn");
+
+  if (hasEvent) {
+    createEventBtn.disabled = true;
+    createEventBtn.style.opacity = "0.6";
+    createEventBtn.title = "Vous avez déjà créé votre événement.";
+  } else {
+    createEventBtn.disabled = false;
+    createEventBtn.style.opacity = "1";
+    createEventBtn.title = "";
+  }
+}
 
 }
 </script>
