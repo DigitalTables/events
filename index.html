@@ -29,21 +29,16 @@
   <button id="logout" style="display:none; max-width:300px;">Se déconnecter</button>
 </div>
 
-<!-- ================= AUTH ================= -->
-<section id="auth">
-  <div class="container" style="max-width:480px;">
-    <h3 style="text-align:center;">Connexion / Inscription</h3>
-
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Mot de passe" />
-
-    <button id="signup">Créer un compte</button>
-    <button id="login">Se connecter</button>
+<!-- ================= DASHBOARD ================= -->
+<section id="dashboard" style="display:none;">
+  <div class="container">
+    <h3 style="text-align:center;">Mes événements</h3>
+    <div id="eventsContainer" class="dashboard-grid"></div>
   </div>
 </section>
 
 <!-- ================= CREATE EVENT ================= -->
-<section id="upload" style="display:none;">
+<section id="upload" style="display:none; margin-top:2rem;">
   <div class="container" style="max-width:720px;">
 
     <h3 style="text-align:center;">Créer un événement</h3>
@@ -120,14 +115,6 @@
   </div>
 </section>
 
-<!-- ================= DASHBOARD ================= -->
-<section id="dashboard" style="display:none;">
-  <div class="container">
-    <h3 style="text-align:center;">Mes événements</h3>
-    <div id="eventsContainer" class="dashboard-grid"></div>
-  </div>
-</section>
-
 <footer>
   <div class="container">
     <p>© 2025 DigitalTables. Tous droits réservés.</p>
@@ -192,9 +179,9 @@ supabase.auth.onAuthStateChange((_e, s) => {
 
 function onLogin() {
   authDiv.style.display = "none";
-  uploadDiv.style.display = "block";
+  dashboardDiv.style.display = "block"; // Priorité à l’existant
+  uploadDiv.style.display = "block";    // Création ensuite
   logoutBtn.style.display = "inline-block";
-  dashboardDiv.style.display = "block";
   loadUserUploads().then(enforceEventLimit);
 }
 
@@ -346,83 +333,83 @@ async function loadUserUploads() {
 
   for (const e of events) {
     const card = document.createElement("div");
+    card.style.marginBottom = "1.5rem";
 
     card.innerHTML = `
       <h4>${e.username}</h4>
       <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
       ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
-
-
-      
-      <button class="danger">🔥 Supprimer définitivement</button>
     `;
 
     /* SYNC PRIVATE SHEET */
-if (e.google_sheet_url && e.is_private) {
-  const syncOneBtn = document.createElement("button");
-  syncOneBtn.textContent = "Sync CSV privé";
-
-  syncOneBtn.onclick = async () => {
-    const session = await supabase.auth.getSession();
-    const accessToken = session.data.session?.access_token;
-    if (!accessToken) return alert("❌ Connecte-toi.");
-
-    syncOneBtn.textContent = "Sync...";
-    syncOneBtn.disabled = true;
-
-    try {const res = await fetch(
-  `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
-  {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      event_id: e.id,
-      username: e.username,
-      google_sheet_url: e.google_sheet_url,
-      password: e.event_password
-    })
-  }
-);
-  
-
-      let data = {};
-      try {
-        data = JSON.parse(await res.text());
-      } catch {}
-
-      if (!res.ok) throw new Error(data.error || "Unknown sync error");
-
-      alert("✅ CSV privé synchronisé !");
-      await loadUserUploads().then(enforceEventLimit);
-
-    } catch (err) {
-      alert("❌ Sync error : " + err.message);
-    } finally {
+    if (e.google_sheet_url && e.is_private) {
+      const syncOneBtn = document.createElement("button");
       syncOneBtn.textContent = "Sync CSV privé";
-      syncOneBtn.disabled = false;
+
+      syncOneBtn.onclick = async () => {
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) return alert("❌ Connecte-toi.");
+
+        syncOneBtn.textContent = "Sync...";
+        syncOneBtn.disabled = true;
+
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                event_id: e.id,
+                username: e.username,
+                google_sheet_url: e.google_sheet_url,
+                password: e.event_password
+              })
+            }
+          );
+
+          let data = {};
+          try { data = JSON.parse(await res.text()); } catch {}
+
+          if (!res.ok) throw new Error(data.error || "Unknown sync error");
+
+          alert("✅ CSV privé synchronisé !");
+          await loadUserUploads().then(enforceEventLimit);
+
+        } catch (err) {
+          alert("❌ Sync error : " + err.message);
+        } finally {
+          syncOneBtn.textContent = "Sync CSV privé";
+          syncOneBtn.disabled = false;
+        }
+      };
+
+      card.appendChild(syncOneBtn);
+
+      if (e.updated_at) {
+        const syncInfo = document.createElement("div");
+        syncInfo.textContent =
+          "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
+        syncInfo.style.fontSize = "0.85rem";
+        card.appendChild(syncInfo);
+      }
     }
-  };
 
-  card.appendChild(syncOneBtn);
-
-  if (e.updated_at) {
-    const syncInfo = document.createElement("div");
-    syncInfo.textContent =
-      "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
-    syncInfo.style.fontSize = "0.85rem";
-    card.appendChild(syncInfo);
-  }
-}
-
-
-    card.querySelector("button").onclick = async () => {
+    /* BOUTON SUPPRIMER à la fin et plus petit */
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "🔥 Supprimer définitivement";
+    deleteBtn.style.fontSize = "0.85rem";
+    deleteBtn.style.marginTop = "0.5rem";
+    deleteBtn.onclick = async () => {
       if (!confirm("Supprimer définitivement ?")) return;
       await supabase.from("events").update({ deleted: true }).eq("id", e.id);
       loadUserUploads();
     };
+    card.appendChild(deleteBtn);
 
     container.appendChild(card);
   }
@@ -441,13 +428,12 @@ async function enforceEventLimit() {
   createEventBtn.disabled = events.length >= 1;
 }
 
-  /* Format pour la date d'update*/
-  function formatDateWithTimeZone(dateString) {
+/* Format pour la date d'update */
+function formatDateWithTimeZone(dateString) {
   return new Date(dateString).toLocaleString(undefined, {
     timeZoneName: "short"
   });
 }
-
 </script>
 
 </body>
