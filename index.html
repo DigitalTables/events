@@ -338,7 +338,7 @@ if (e.google_sheet_url && e.is_private) {
     } catch (err) {
       alert("❌ Sync error : " + err.message);
     } finally {
-      syncOneBtn.textContent = "Sync CSV privé";
+      syncOneBtn.textContent = "Sync Google sheet privée";
       syncOneBtn.disabled = false;
     }
   };
