@@ -133,7 +133,6 @@ nav a:hover {
     font-size: 1.4rem;
   }
 
-  /* ✅ Menu sur une seule ligne, compact, sans scroll */
   nav {
     justify-content: center;
     gap: 0.6rem;
@@ -192,7 +191,7 @@ section {
 }
 
 .features, .pricing, .demo, .contact {
-  background: var(--light);
+  background: var(--secondary); /* plus transparent que le blanc */
 }
 
 .features h2, .pricing h2, .demo h2, .contact h2 {
@@ -205,7 +204,7 @@ section {
 /* ================================
    GRID / PLANS
 ================================ */
-.grid, .plans {
+.grid, .plans, .dashboard-grid {
   display: flex;
   gap: 2rem;
   flex-wrap: wrap;
@@ -213,7 +212,7 @@ section {
 }
 
 /* FEATURE / PRICING CARDS */
-.feature {
+.feature, .dashboard-card {
   flex: 1;
   min-width: 250px;
   background: #f8f5f0;
@@ -308,13 +307,29 @@ button:hover {
 }
 
 /* ================================
+   BOUTON SUPPRIMER DASHBOARD
+================================ */
+#eventsContainer button {
+  background: #d9534f;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+#eventsContainer button:hover {
+  background: #c9302c;
+}
+
+/* ================================
    JOTFORM STYLES
 ================================ */
 .digitaltables-jotform {
   width: 100%;
 }
 
-/* Suppression des puces + meilleure mise en page du formulaire */
 .digitaltables-jotform ul,
 .digitaltables-jotform li {
   list-style: none !important;
@@ -322,7 +337,6 @@ button:hover {
   padding: 0;
 }
 
-/* Apparence améliorée du bloc formulaire */
 .digitaltables-jotform .jotform-form {
   background: var(--light) !important;
   border-radius: 12px !important;
@@ -333,7 +347,6 @@ button:hover {
   border: 1px solid #eee;
 }
 
-/* Labels et sous-labels plus élégants */
 .digitaltables-jotform .form-label {
   font-weight: 700 !important;
   color: var(--dark);
@@ -346,14 +359,12 @@ button:hover {
   color: #6b5a4a;
 }
 
-/* Champs plus harmonieux */
 .digitaltables-jotform input,
 .digitaltables-jotform textarea {
   width: 100%;
   margin-bottom: 0.75rem;
 }
 
-/* ✅ Centrage du bouton du formulaire */
 .digitaltables-jotform .form-buttons-wrapper {
   display: flex !important;
   justify-content: center !important;
@@ -406,70 +417,3 @@ footer {
   padding: 1rem 0;
   font-size: .9rem;
 }
-/* ================================
-   UI APP (DASHBOARD / CARDS)
-================================ */
-
-.card {
-  background: var(--light);
-  padding: 2rem;
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-  max-width: 720px;
-  margin: 2rem auto;
-}
-
-.card.soft {
-  background: #f8f5f0;
-  box-shadow: none;
-  border: 1px solid #eee;
-}
-
-.hint {
-  font-size: 0.9rem;
-  margin-top: 0.3rem;
-  color: #6b5a4a;
-}
-
-.mode-selector {
-  display: flex;
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-
-.mode-selector label {
-  flex: 1;
-  padding: 1rem;
-  background: var(--secondary);
-  border-radius: 12px;
-  border: 1px solid var(--accent);
-  text-align: center;
-  cursor: pointer;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
-  gap: 1rem;
-  margin-bottom: 3rem;
-}
-
-.dashboard-grid > div {
-  background: var(--light);
-  border-radius: 14px;
-  padding: 1.2rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-button.danger {
-  background: #b03a2e !important;
-  color: white !important;
-  width: 100%;
-}
-
-button.secondary {
-  background: #6b5a4a !important;
-  color: white !important;
-  width: 100%;
-}
-
