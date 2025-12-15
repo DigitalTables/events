@@ -417,3 +417,15 @@ footer {
   padding: 1rem 0;
   font-size: .9rem;
 }
+
+.dashboard-card button {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.dashboard-card .danger {
+  background: #c9302c;
+  margin-top: 1rem;
+}
+
