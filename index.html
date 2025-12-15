@@ -33,14 +33,16 @@
 <section id="auth">
   <div class="container" style="max-width:480px;">
     <h3 style="text-align:center;">Connexion / Inscription</h3>
+
     <input type="email" id="email" placeholder="Email" />
     <input type="password" id="password" placeholder="Mot de passe" />
+
     <button id="signup">Créer un compte</button>
     <button id="login">Se connecter</button>
   </div>
 </section>
 
-<!-- ================= DASHBOARD ================= -->
+<!-- ================= DASHBOARD (PATCH 1 : déplacé avant upload) ================= -->
 <section id="dashboard" style="display:none;">
   <div class="container">
     <h3 style="text-align:center;">Mes événements</h3>
@@ -48,120 +50,196 @@
   </div>
 </section>
 
-<!-- ================= CREATE / EDIT EVENT ================= -->
+<!-- ================= CREATE EVENT ================= -->
 <section id="upload" style="display:none;">
   <div class="container" style="max-width:720px;">
-    <h3 id="formTitle" style="text-align:center;">Créer / Modifier un événement</h3>
+
+    <h3 style="text-align:center;">Créer un événement</h3>
 
     <label>Identifiant public (URL)</label>
-    <input type="text" id="username" />
+    <input type="text" id="username" placeholder="ex : mariage-anne-2026" />
     <div id="usernameStatus" class="hint"></div>
 
-    <label style="margin-top:1rem;">
+    <hr style="margin:2rem 0;">
+
+    <strong>Visibilité de l’événement</strong>
+    <label style="display:block; margin-top:0.5rem;">
       <input type="checkbox" id="privateCsv" />
-      Événement privé
+      Événement privé (accès par mot de passe)
     </label>
 
-    <div id="passwordDiv" style="display:none;">
-      <input type="password" id="eventPassword" placeholder="Mot de passe" />
+    <div id="passwordDiv" style="display:none; margin-top:0.75rem;">
+      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
     </div>
 
-    <hr>
+    <hr style="margin:2rem 0;">
 
-    <h4>Importer / remplacer le CSV</h4>
+    <strong>Source des invités</strong>
+
+    <div class="mode-selector">
+      <label>
+        <input type="radio" name="mode" id="modeCsv" checked />
+        📄 Import CSV
+      </label>
+      <label>
+        <input type="radio" name="mode" id="modeSheet" />
+        📊 Google Sheet
+      </label>
+    </div>
+
+    <h4 id="uploadTitle">Importer votre fichier CSV</h4>
     <input type="file" id="guests" accept=".csv" />
 
-    <hr>
+    <hr style="margin:2rem 0;">
 
     <h4>Images par table (optionnel)</h4>
     <div id="tableImageRows"></div>
-    <button id="addTableImageRow">➕ Ajouter une table</button>
 
-    <hr>
+    <button id="addTableImageRow" style="max-width:260px; margin-bottom:2rem;">
+      ➕ Ajouter une table
+    </button>
 
-    <button id="createEventBtn">💾 Enregistrer</button>
+    <hr style="margin:2.5rem 0;">
+
+    <div style="text-align:center;">
+      <button id="createEventBtn" style="max-width:360px; font-size:1.1rem;">
+        ✅ Créer l’événement
+      </button>
+    </div>
+
+    <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
+
   </div>
 </section>
 
 <footer>
   <div class="container">
-    <p>© 2025 DigitalTables</p>
+    <p>© 2025 DigitalTables. Tous droits réservés.</p>
   </div>
 </footer>
 
 <script type="module">
-import { supabase, SUPABASE_URL } from './supabase.js';
+import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-let editingEventId = null;
+/* ================= PATCH 3 ================= */
+let editingEvent = null;
 
+/* ================= DOM ================= */
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
 const dashboardDiv = document.getElementById("dashboard");
-const eventsContainer = document.getElementById("eventsContainer");
 const logoutBtn = document.getElementById("logout");
 
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const signup = document.getElementById("signup");
+const login = document.getElementById("login");
+
+const createEventBtn = document.getElementById("createEventBtn");
+const csvInput = document.getElementById("guests");
 const usernameInput = document.getElementById("username");
+const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
-const csvInput = document.getElementById("guests");
-const createEventBtn = document.getElementById("createEventBtn");
+const tableImageRows = document.getElementById("tableImageRows");
 
-privateCsvCheckbox.onchange = () => {
-  passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
-};
-
-supabase.auth.onAuthStateChange((_e, s) => {
-  if (s) {
-    authDiv.style.display = "none";
-    dashboardDiv.style.display = "block";
-    uploadDiv.style.display = "block";
-    logoutBtn.style.display = "inline-block";
-    loadUserUploads();
-  }
+/* ================= AUTH ================= */
+supabase.auth.getSession().then(({ data }) => {
+  data.session ? onLogin() : onLogout();
 });
+supabase.auth.onAuthStateChange((_e, s) => {
+  s ? onLogin() : onLogout();
+});
+
+function onLogin() {
+  authDiv.style.display = "none";
+  dashboardDiv.style.display = "block";
+  uploadDiv.style.display = "block";
+  logoutBtn.style.display = "inline-block";
+  loadUserUploads();
+}
+
+function onLogout() {
+  authDiv.style.display = "block";
+  dashboardDiv.style.display = "none";
+  uploadDiv.style.display = "none";
+  logoutBtn.style.display = "none";
+}
 
 logoutBtn.onclick = async () => {
   await supabase.auth.signOut();
-  location.reload();
 };
 
+/* ================= SIGNUP / LOGIN ================= */
+signup.onclick = async () => {
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
+  if (error) return alert(error.message);
+  await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+};
+
+login.onclick = async () => {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+  if (error) alert(error.message);
+};
+
+/* ================= DASHBOARD ================= */
 async function loadUserUploads() {
-  eventsContainer.innerHTML = "";
   const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
 
   const { data: events } = await supabase
     .from("events")
     .select("*")
-    .eq("user_id", userData.user.id)
+    .eq("user_id", user.id)
     .eq("deleted", false);
 
+  const container = document.getElementById("eventsContainer");
+  container.innerHTML = "";
+
   if (!events?.length) {
-    eventsContainer.textContent = "Aucun événement.";
+    container.textContent = "Aucun événement pour l’instant.";
     return;
   }
 
   for (const e of events) {
     const card = document.createElement("div");
-    card.className = "dashboard-card";
 
     card.innerHTML = `
       <h4>${e.username}</h4>
-      <a href="/events/tables.html?event=${e.username}" target="_blank">🔗 Lien public</a>
+      <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
       ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
     `;
 
-    if (e.google_sheet_url && e.is_private) {
-      const syncBtn = document.createElement("button");
-      syncBtn.textContent = "🔄 Sync Google Sheet privé";
-      card.appendChild(syncBtn);
-    }
-
+    /* PATCH 3 : bouton modifier */
     const editBtn = document.createElement("button");
-    editBtn.textContent = "✏️ Modifier l’événement";
-    editBtn.onclick = () => loadEventForEdit(e);
+    editBtn.textContent = "✏️ Modifier";
+    editBtn.onclick = () => {
+      editingEvent = e;
+      usernameInput.value = e.username;
+      usernameInput.disabled = true;
+      privateCsvCheckbox.checked = e.is_private;
+      passwordDiv.style.display = e.is_private ? "block" : "none";
+      eventPasswordInput.value = e.event_password || "";
+      window.scrollTo({ top: uploadDiv.offsetTop, behavior: "smooth" });
+    };
     card.appendChild(editBtn);
+
+    /* PATCH 2 : séparation avant suppression */
+    const hr = document.createElement("hr");
+    hr.style.margin = "0.75rem 0";
+    card.appendChild(hr);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "🔥 Supprimer définitivement";
@@ -173,45 +251,56 @@ async function loadUserUploads() {
     };
 
     card.appendChild(deleteBtn);
-    eventsContainer.appendChild(card);
+    container.appendChild(card);
   }
 }
 
-function loadEventForEdit(e) {
-  editingEventId = e.id;
-  usernameInput.value = e.username;
-  usernameInput.disabled = true;
-  privateCsvCheckbox.checked = e.is_private;
-  eventPasswordInput.value = e.event_password || "";
-  passwordDiv.style.display = e.is_private ? "block" : "none";
-  createEventBtn.textContent = "💾 Mettre à jour";
-  window.scrollTo({ top: uploadDiv.offsetTop, behavior: "smooth" });
-}
-
+/* ================= CREATE / UPDATE EVENT ================= */
 createEventBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("Connecte-toi");
+
   const username = usernameInput.value.trim();
+  const isPrivate = privateCsvCheckbox.checked;
+  const passwordEvent = eventPasswordInput.value.trim();
 
-  if (csvInput.files[0]) {
-    const text = await csvInput.files[0].text();
-    await supabase.storage
-      .from("guests")
-      .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
+  if (editingEvent) {
+    await supabase
+      .from("events")
+      .update({
+        is_private: isPrivate,
+        event_password: isPrivate ? passwordEvent : null
+      })
+      .eq("id", editingEvent.id);
+
+    editingEvent = null;
+    usernameInput.disabled = false;
+    alert("✅ Événement mis à jour");
+    loadUserUploads();
+    return;
   }
 
-  const payload = {
-    is_private: privateCsvCheckbox.checked,
-    event_password: privateCsvCheckbox.checked ? eventPasswordInput.value : null
-  };
+  /* === CRÉATION ORIGINALE INCHANGÉE === */
+  const file = csvInput.files[0];
+  if (!file) return alert("CSV manquant");
 
-  if (editingEventId) {
-    await supabase.from("events").update(payload).eq("id", editingEventId);
-  }
+  const text = await file.text();
+  const parsed = Papa.parse(text, { header: true }).data;
 
-  alert("✅ Événement enregistré");
-  editingEventId = null;
-  usernameInput.disabled = false;
-  createEventBtn.textContent = "Créer l’événement";
+  await supabase.storage
+    .from("guests")
+    .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
+
+  await supabase.from("events").upsert({
+    username,
+    is_private: isPrivate,
+    event_password: isPrivate ? passwordEvent : null,
+    user_id: user.id,
+    uploaded_at: new Date().toISOString()
+  });
+
+  alert("✅ Événement créé !");
   loadUserUploads();
 };
 </script>
