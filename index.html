@@ -42,16 +42,6 @@
   </div>
 </section>
 
-<!-- ================= DASHBOARD (PATCH 1 : déplacé avant upload) ================= -->
-<section id="dashboard" style="display:none;">
-  <div class="container">
-    <h3 style="text-align:center;">Mes événements</h3>
-    <div id="eventsContainer" class="dashboard-grid"></div>
-  </div>
-</section>
-
-
-  
 <!-- ================= CREATE EVENT ================= -->
 <section id="upload" style="display:none;">
   <div class="container" style="max-width:720px;">
@@ -94,17 +84,33 @@
 
     <hr style="margin:2rem 0;">
 
+    <!-- ===== IMAGES OPTIONNELLES ===== -->
     <h4>Images par table (optionnel)</h4>
+    <p style="font-size:0.9rem; color:#6b5a4a;">
+      Vous pouvez associer une image à certaines tables (facultatif).
+    </p>
+
     <div id="tableImageRows"></div>
 
-    <button id="addTableImageRow" style="max-width:260px; margin-bottom:2rem;">
+    <button
+      id="addTableImageRow"
+      style="max-width:260px; margin-bottom:2rem;"
+    >
       ➕ Ajouter une table
     </button>
 
+    <!-- ===== ACTION PRINCIPALE ===== -->
     <hr style="margin:2.5rem 0;">
 
     <div style="text-align:center;">
-      <button id="createEventBtn" style="max-width:360px; font-size:1.1rem;">
+      <p style="font-weight:600; margin-bottom:0.5rem;">
+        Une fois tout prêt :
+      </p>
+
+      <button
+        id="createEventBtn"
+        style="max-width:360px; font-size:1.1rem;"
+      >
         ✅ Créer l’événement
       </button>
     </div>
@@ -114,18 +120,24 @@
   </div>
 </section>
 
+<!-- ================= DASHBOARD ================= -->
+<section id="dashboard" style="display:none;">
+  <div class="container">
+    <h3 style="text-align:center;">Mes événements</h3>
+    <div id="eventsContainer" class="dashboard-grid"></div>
+  </div>
+</section>
+
 <footer>
   <div class="container">
     <p>© 2025 DigitalTables. Tous droits réservés.</p>
   </div>
 </footer>
 
+<!-- ================= SCRIPT ================= -->
 <script type="module">
 import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
-
-/* ================= PATCH 3 ================= */
-let editingEvent = null;
 
 /* ================= DOM ================= */
 const authDiv = document.getElementById("auth");
@@ -145,7 +157,30 @@ const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
 const eventPasswordInput = document.getElementById("eventPassword");
+const publicUrlDiv = document.getElementById("publicUrl");
 const tableImageRows = document.getElementById("tableImageRows");
+const addTableImageRowBtn = document.getElementById("addTableImageRow");
+const modeCsv = document.getElementById("modeCsv");
+const modeSheet = document.getElementById("modeSheet");
+const uploadTitle = document.getElementById("uploadTitle");
+
+/* ================= UI ================= */
+privateCsvCheckbox.onchange = () => {
+  passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
+};
+
+function updateModeUI() {
+  if (modeCsv.checked) {
+    uploadTitle.textContent = "Importer votre fichier CSV";
+    csvInput.style.display = "block";
+  } else {
+    uploadTitle.textContent = "Les invités seront gérés via Google Sheet";
+    csvInput.style.display = "none";
+  }
+}
+modeCsv.onchange = updateModeUI;
+modeSheet.onchange = updateModeUI;
+updateModeUI();
 
 /* ================= AUTH ================= */
 supabase.auth.getSession().then(({ data }) => {
@@ -157,17 +192,17 @@ supabase.auth.onAuthStateChange((_e, s) => {
 
 function onLogin() {
   authDiv.style.display = "none";
-  dashboardDiv.style.display = "block";
   uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
-  loadUserUploads();
+  dashboardDiv.style.display = "block";
+  loadUserUploads().then(enforceEventLimit);
 }
 
 function onLogout() {
   authDiv.style.display = "block";
-  dashboardDiv.style.display = "none";
   uploadDiv.style.display = "none";
   logoutBtn.style.display = "none";
+  dashboardDiv.style.display = "none";
 }
 
 logoutBtn.onclick = async () => {
@@ -194,6 +229,24 @@ login.onclick = async () => {
   });
   if (error) alert(error.message);
 };
+
+/* ================= USERNAME CHECK ================= */
+async function checkPublicJsonExists(username) {
+  const { data } = await supabase.storage
+    .from("public-guests")
+    .list("", { search: `guests_${username}.json` });
+  return data?.some(f => f.name === `guests_${username}.json`);
+}
+
+usernameInput.onblur = async () => {
+  const u = usernameInput.value.trim();
+  if (!u) return usernameStatus.textContent = "";
+  const exists = await checkPublicJsonExists(u);
+  usernameStatus.textContent = exists ? "❌ Identifiant déjà utilisé" : "✔ Disponible";
+  usernameStatus.style.color = exists ? "red" : "green";
+};
+
+
 
 /* ================= DASHBOARD ================= */
 async function loadUserUploads() {
@@ -222,121 +275,183 @@ async function loadUserUploads() {
       <h4>${e.username}</h4>
       <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
       ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
+
+
+      
+      <button class="danger">🔥 Supprimer définitivement</button>
     `;
-if (e.updated_at) {
-  const updateInfo = document.createElement("div");
-  updateInfo.textContent =
-    "📝 Dernière modification : " + formatDateWithTimeZone(e.updated_at);
-  updateInfo.style.fontSize = "0.85rem";
-  updateInfo.style.opacity = "0.8";
-  card.appendChild(updateInfo);
+
+    /* SYNC PRIVATE SHEET */
+if (e.google_sheet_url && e.is_private) {
+  const syncOneBtn = document.createElement("button");
+  syncOneBtn.textContent = "Sync CSV privé";
+
+  syncOneBtn.onclick = async () => {
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+    if (!accessToken) return alert("❌ Connecte-toi.");
+
+    syncOneBtn.textContent = "Sync...";
+    syncOneBtn.disabled = true;
+
+    try {const res = await fetch(
+  `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      event_id: e.id,
+      username: e.username,
+      google_sheet_url: e.google_sheet_url,
+      password: e.event_password
+    })
+  }
+);
+  
+
+      let data = {};
+      try {
+        data = JSON.parse(await res.text());
+      } catch {}
+
+      if (!res.ok) throw new Error(data.error || "Unknown sync error");
+
+      alert("✅ CSV privé synchronisé !");
+      await loadUserUploads().then(enforceEventLimit);
+
+    } catch (err) {
+      alert("❌ Sync error : " + err.message);
+    } finally {
+      syncOneBtn.textContent = "Sync CSV privé";
+      syncOneBtn.disabled = false;
+    }
+  };
+
+  card.appendChild(syncOneBtn);
+
+  if (e.updated_at) {
+    const syncInfo = document.createElement("div");
+    syncInfo.textContent =
+      "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
+    syncInfo.style.fontSize = "0.85rem";
+    card.appendChild(syncInfo);
+  }
 }
-/* SYNC PRIVATE SHEET */ if (e.google_sheet_url && e.is_private) { 
-  const syncOneBtn = document.createElement("button"); 
-                                         syncOneBtn.textContent = "Sync CSV privé"; syncOneBtn.onclick = async () => { 
-                                                                    const session = await supabase.auth.getSession(); const accessToken = session.data.session?.access_token;
-                                                                                                                                               if (!accessToken) return alert("❌ Connecte-toi."); 
-                                                                                                                                               syncOneBtn.textContent = "Sync..."; syncOneBtn.disabled = true; 
-                                           try {
-                                             const res = await fetch( ${SUPABASE_URL}/functions/v1/sync-privatesheet-csv,
-                                             { method: "POST", headers: { "Authorization": Bearer ${accessToken}, "Content-Type": "application/json" }, body: JSON.stringify({ event_id: e.id, username: e.username, google_sheet_url: e.google_sheet_url, password: e.event_password }) } );
-                                             let data = {}; try { data = JSON.parse(await res.text()); }
-                                             catch {}
-                                             if (!res.ok) throw new Error(data.error || "Unknown sync error");
-                                             alert("✅ CSV privé synchronisé !"); await loadUserUploads().then(enforceEventLimit); } 
-                                           catch (err) { alert("❌ Sync error : " + err.message); } finally { syncOneBtn.textContent = "Sync CSV privé";
-                                                                                                            syncOneBtn.disabled = false; } }; card.appendChild(syncOneBtn); if (e.updated_at) { const syncInfo = document.createElement("div"); syncInfo.textContent = "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at); syncInfo.style.fontSize = "0.85rem"; card.appendChild(syncInfo);
-                                                                                                                                                                                              } } 
-    card.querySelector("button").onclick = async () => { if (!confirm("Supprimer définitivement ?")) return; 
-                                                        await supabase.from("events").update({ deleted: true }).eq("id", e.id); loadUserUploads(); };
-    container.appendChild(card); } }
-    /* PATCH 3 : bouton modifier */
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "✏️ Modifier";
-    editBtn.onclick = () => {
-      editingEvent = e;
-      usernameInput.value = e.username;
-      usernameInput.disabled = true;
-      privateCsvCheckbox.checked = e.is_private;
-      passwordDiv.style.display = e.is_private ? "block" : "none";
-      eventPasswordInput.value = e.event_password || "";
-      window.scrollTo({ top: uploadDiv.offsetTop, behavior: "smooth" });
-    };
-    card.appendChild(editBtn);
 
-    /* PATCH 2 : séparation avant suppression */
-    const hr = document.createElement("hr");
-    hr.style.margin = "0.75rem 0";
-    card.appendChild(hr);
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🔥 Supprimer définitivement";
-    deleteBtn.className = "danger";
-    deleteBtn.onclick = async () => {
+    card.querySelector("button").onclick = async () => {
       if (!confirm("Supprimer définitivement ?")) return;
       await supabase.from("events").update({ deleted: true }).eq("id", e.id);
       loadUserUploads();
     };
 
-    card.appendChild(deleteBtn);
     container.appendChild(card);
   }
 }
-  
-function formatDateWithTimeZone(dateString) {
-  return new Date(dateString).toLocaleString(undefined, {
-    timeZoneName: "short"
-  });
-}
 
-/* ================= CREATE / UPDATE EVENT ================= */
+  
+/* ================= TABLE IMAGES ================= */
+function addTableImageRow() {
+  const div = document.createElement("div");
+  div.style.marginBottom = "0.5rem";
+  div.innerHTML = `
+    <input type="text" placeholder="Nom de la table" />
+    <input type="file" accept="image/*" />
+    <button type="button">❌</button>
+  `;
+  div.querySelector("button").onclick = () => div.remove();
+  tableImageRows.appendChild(div);
+}
+addTableImageRowBtn.onclick = addTableImageRow;
+
+/* ================= CREATE EVENT ================= */
 createEventBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("Connecte-toi");
 
   const username = usernameInput.value.trim();
+  if (!username) return alert("Identifiant requis");
+
   const isPrivate = privateCsvCheckbox.checked;
   const passwordEvent = eventPasswordInput.value.trim();
+  if (isPrivate && !passwordEvent) return alert("Mot de passe requis");
 
-  if (editingEvent) {
-    await supabase
-      .from("events")
-      .update({
-        is_private: isPrivate,
-        event_password: isPrivate ? passwordEvent : null
-      })
-      .eq("id", editingEvent.id);
+  const mode = modeCsv.checked ? "csv" : "sheet";
 
-    editingEvent = null;
-    usernameInput.disabled = false;
-    alert("✅ Événement mis à jour");
-    loadUserUploads();
-    return;
+  try {
+    createEventBtn.disabled = true;
+    createEventBtn.textContent = "Création…";
+
+    let signedUrl = null;
+
+    if (mode === "csv") {
+      const file = csvInput.files[0];
+      if (!file) throw new Error("CSV manquant");
+
+      const text = await file.text();
+      const parsed = Papa.parse(text, { header: true }).data;
+
+      await supabase.storage
+        .from("guests")
+        .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
+
+      if (!isPrivate) {
+        await supabase.storage
+          .from("public-guests")
+          .upload(
+            `guests_${username}.json`,
+            new Blob([JSON.stringify(parsed)]),
+            { upsert: true }
+          );
+        signedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/guests_${username}.json`;
+      }
+    }
+
+    await supabase.from("events").upsert({
+      username,
+      is_private: isPrivate,
+      event_password: isPrivate ? passwordEvent : null,
+      signed_url: signedUrl,
+      user_id: user.id,
+      uploaded_at: new Date().toISOString()
+    });
+
+    alert("✅ Événement créé !");
+    loadUserUploads().then(enforceEventLimit);
+
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    createEventBtn.disabled = false;
+    createEventBtn.textContent = "Créer l’événement";
   }
-
-  /* === CRÉATION ORIGINALE INCHANGÉE === */
-  const file = csvInput.files[0];
-  if (!file) return alert("CSV manquant");
-
-  const text = await file.text();
-  const parsed = Papa.parse(text, { header: true }).data;
-
-  await supabase.storage
-    .from("guests")
-    .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
-
-  await supabase.from("events").upsert({
-    username,
-    is_private: isPrivate,
-    event_password: isPrivate ? passwordEvent : null,
-    user_id: user.id,
-    uploaded_at: new Date().toISOString()
-  });
-
-  alert("✅ Événement créé !");
-  loadUserUploads();
 };
+
+
+/* ================= LIMIT ================= */
+async function enforceEventLimit() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  const { data: events } = await supabase
+    .from("events")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  createEventBtn.disabled = events.length >= 1;
+}
+
+  /* Format pour la date d'update*/
+  function formatDateWithTimeZone(dateString) {
+  return new Date(dateString).toLocaleString(undefined, {
+    timeZoneName: "short"
+  });
+}
+
 </script>
 
 </body>
