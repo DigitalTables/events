@@ -21,12 +21,12 @@
 <section class="hero">
   <div class="container">
     <h2>Attribuez facilement la table de vos invités</h2>
-    <p>Importez un CSV ou utilisez une Google Sheet. Public ou privé, en toute simplicité.</p>
+    <p>Import CSV ou Google Sheet • Événement public ou privé</p>
   </div>
 </section>
 
-<div style="text-align:center; margin-top:1rem;">
-  <button id="logout" style="display:none; max-width:300px;">Se déconnecter</button>
+<div style="text-align:center;margin-top:1rem;">
+  <button id="logout" style="display:none;max-width:300px;">Se déconnecter</button>
 </div>
 
 <!-- AUTH -->
@@ -47,7 +47,7 @@
   <div id="usernameStatus" class="hint"></div>
 
   <div class="card soft">
-    <strong>Visibilité de l’événement</strong>
+    <strong>Visibilité</strong><br>
     <label>
       <input type="checkbox" id="privateCsv" />
       Événement privé (mot de passe requis)
@@ -98,24 +98,53 @@
 import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-/* === DOM === */
+/* ================= DOM ================= */
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
 const dashboardDiv = document.getElementById("dashboard");
 const logoutBtn = document.getElementById("logout");
 
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const signup = document.getElementById("signup");
+const login = document.getElementById("login");
+
+const createEventBtn = document.getElementById("createEventBtn");
+const csvInput = document.getElementById("guests");
+const usernameInput = document.getElementById("username");
+const usernameStatus = document.getElementById("usernameStatus");
 const privateCsvCheckbox = document.getElementById("privateCsv");
 const passwordDiv = document.getElementById("passwordDiv");
+const eventPasswordInput = document.getElementById("eventPassword");
+const publicUrlDiv = document.getElementById("publicUrl");
+const tableImageRows = document.getElementById("tableImageRows");
+const addTableImageRowBtn = document.getElementById("addTableImageRow");
+const modeCsv = document.getElementById("modeCsv");
+const modeSheet = document.getElementById("modeSheet");
+const uploadTitle = document.getElementById("uploadTitle");
 
+/* ================= UI ================= */
 privateCsvCheckbox.onchange = () => {
   passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
 };
 
-/* === AUTH === */
+function updateModeUI() {
+  if (modeCsv.checked) {
+    uploadTitle.textContent = "Importer votre fichier CSV";
+    csvInput.style.display = "block";
+  } else {
+    uploadTitle.textContent = "Les invités seront gérés via Google Sheet";
+    csvInput.style.display = "none";
+  }
+}
+modeCsv.onchange = updateModeUI;
+modeSheet.onchange = updateModeUI;
+updateModeUI();
+
+/* ================= AUTH ================= */
 supabase.auth.getSession().then(({ data }) => {
   data.session ? onLogin() : onLogout();
 });
-
 supabase.auth.onAuthStateChange((_e, s) => {
   s ? onLogin() : onLogout();
 });
@@ -139,9 +168,169 @@ logoutBtn.onclick = async () => {
   await supabase.auth.signOut();
 };
 
-/* ⚠️ TOUT LE JS MÉTIER (création event, CSV, sheets, dashboard, sync privé, delete)
-   RESTE STRICTEMENT IDENTIQUE À TON CODE ACTUEL
-   → tu peux le coller ici sans aucune modification */
+/* ================= SIGNUP / LOGIN ================= */
+signup.onclick = async () => {
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
+  if (error) return alert(error.message);
+  await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+};
+
+login.onclick = async () => {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+  if (error) alert(error.message);
+};
+
+/* ================= USERNAME CHECK ================= */
+async function checkPublicJsonExists(username) {
+  const { data } = await supabase.storage
+    .from("public-guests")
+    .list("", { search: `guests_${username}.json` });
+  return data?.some(f => f.name === `guests_${username}.json`);
+}
+
+usernameInput.onblur = async () => {
+  const u = usernameInput.value.trim();
+  if (!u) return usernameStatus.textContent = "";
+  const exists = await checkPublicJsonExists(u);
+  usernameStatus.textContent = exists ? "❌ Identifiant déjà utilisé" : "✔ Disponible";
+  usernameStatus.style.color = exists ? "red" : "green";
+};
+
+/* ================= TABLE IMAGES ================= */
+function addTableImageRow() {
+  const div = document.createElement("div");
+  div.innerHTML = `
+    <input type="text" placeholder="Nom de la table" />
+    <input type="file" accept="image/*" />
+    <button type="button">❌</button>
+  `;
+  div.querySelector("button").onclick = () => div.remove();
+  tableImageRows.appendChild(div);
+}
+addTableImageRowBtn.onclick = addTableImageRow;
+
+/* ================= CREATE EVENT ================= */
+createEventBtn.onclick = async () => {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("Connecte-toi");
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("Identifiant requis");
+
+  const isPrivate = privateCsvCheckbox.checked;
+  const passwordEvent = eventPasswordInput.value.trim();
+  if (isPrivate && !passwordEvent) return alert("Mot de passe requis");
+
+  const mode = modeCsv.checked ? "csv" : "sheet";
+
+  try {
+    createEventBtn.disabled = true;
+    createEventBtn.textContent = "Création…";
+
+    let signedUrl = null;
+
+    if (mode === "csv") {
+      const file = csvInput.files[0];
+      if (!file) throw new Error("CSV manquant");
+
+      const text = await file.text();
+      const parsed = Papa.parse(text, { header: true }).data;
+
+      await supabase.storage
+        .from("guests")
+        .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
+
+      if (!isPrivate) {
+        await supabase.storage
+          .from("public-guests")
+          .upload(`guests_${username}.json`, new Blob([JSON.stringify(parsed)]), { upsert: true });
+
+        signedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/guests_${username}.json`;
+      }
+    }
+
+    await supabase.from("events").upsert({
+      username,
+      is_private: isPrivate,
+      event_password: isPrivate ? passwordEvent : null,
+      signed_url: signedUrl,
+      user_id: user.id,
+      uploaded_at: new Date().toISOString()
+    });
+
+    alert("✅ Événement créé !");
+    loadUserUploads().then(enforceEventLimit);
+
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    createEventBtn.disabled = false;
+    createEventBtn.textContent = "Créer l’événement";
+  }
+};
+
+/* ================= DASHBOARD ================= */
+async function loadUserUploads() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  const container = document.getElementById("eventsContainer");
+  container.innerHTML = "";
+
+  if (!events?.length) {
+    container.textContent = "Aucun événement";
+    return;
+  }
+
+  for (const e of events) {
+    const card = document.createElement("div");
+
+    card.innerHTML = `
+      <h4>${e.username}</h4>
+      <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
+      ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
+      <button class="danger">🔥 Supprimer définitivement</button>
+    `;
+
+    card.querySelector("button").onclick = async () => {
+      if (!confirm("Supprimer définitivement ?")) return;
+      await supabase.from("events").update({ deleted: true }).eq("id", e.id);
+      loadUserUploads();
+    };
+
+    container.appendChild(card);
+  }
+}
+
+/* ================= LIMIT ================= */
+async function enforceEventLimit() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  const { data: events } = await supabase
+    .from("events")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  createEventBtn.disabled = events.length >= 1;
+}
 </script>
 
 </body>
