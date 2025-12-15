@@ -57,6 +57,85 @@
   </div>
 </footer>
 
+ <!-- ================= CREATE EVENT ================= -->
+<section id="upload" style="display:none;">
+  <div class="container" style="max-width:720px;">
+
+    <h3 style="text-align:center;">Créer un événement</h3>
+
+    <label>Identifiant public (URL)</label>
+    <input type="text" id="username" placeholder="ex : mariage-anne-2026" />
+    <div id="usernameStatus" class="hint"></div>
+
+    <hr style="margin:2rem 0;">
+
+    <strong>Visibilité de l’événement</strong>
+    <label style="display:block; margin-top:0.5rem;">
+      <input type="checkbox" id="privateCsv" />
+      Événement privé (accès par mot de passe)
+    </label>
+
+    <div id="passwordDiv" style="display:none; margin-top:0.75rem;">
+      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
+    </div>
+
+    <hr style="margin:2rem 0;">
+
+    <strong>Source des invités</strong>
+
+    <div class="mode-selector">
+      <label>
+        <input type="radio" name="mode" id="modeCsv" checked />
+        📄 Import CSV
+      </label>
+      <label>
+        <input type="radio" name="mode" id="modeSheet" />
+        📊 Google Sheet
+      </label>
+    </div>
+
+    <h4 id="uploadTitle">Importer votre fichier CSV</h4>
+    <input type="file" id="guests" accept=".csv" />
+
+    <hr style="margin:2rem 0;">
+
+    <!-- ===== IMAGES OPTIONNELLES ===== -->
+    <h4>Images par table (optionnel)</h4>
+    <p style="font-size:0.9rem; color:#6b5a4a;">
+      Vous pouvez associer une image à certaines tables (facultatif).
+    </p>
+
+    <div id="tableImageRows"></div>
+
+    <button
+      id="addTableImageRow"
+      style="max-width:260px; margin-bottom:2rem;"
+    >
+      ➕ Ajouter une table
+    </button>
+
+    <!-- ===== ACTION PRINCIPALE ===== -->
+    <hr style="margin:2.5rem 0;">
+
+    <div style="text-align:center;">
+      <p style="font-weight:600; margin-bottom:0.5rem;">
+        Une fois tout prêt :
+      </p>
+
+      <button
+        id="createEventBtn"
+        style="max-width:360px; font-size:1.1rem;"
+      >
+        ✅ Créer l’événement
+      </button>
+    </div>
+
+    <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
+
+  </div>
+</section>
+
+  
 <!-- ================= SCRIPT ================= -->
 <script type="module">
 import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
@@ -275,83 +354,7 @@ if (e.google_sheet_url && e.is_private) {
   }
 }
 
- <!-- ================= CREATE EVENT ================= -->
-<section id="upload" style="display:none;">
-  <div class="container" style="max-width:720px;">
 
-    <h3 style="text-align:center;">Créer un événement</h3>
-
-    <label>Identifiant public (URL)</label>
-    <input type="text" id="username" placeholder="ex : mariage-anne-2026" />
-    <div id="usernameStatus" class="hint"></div>
-
-    <hr style="margin:2rem 0;">
-
-    <strong>Visibilité de l’événement</strong>
-    <label style="display:block; margin-top:0.5rem;">
-      <input type="checkbox" id="privateCsv" />
-      Événement privé (accès par mot de passe)
-    </label>
-
-    <div id="passwordDiv" style="display:none; margin-top:0.75rem;">
-      <input type="password" id="eventPassword" placeholder="Mot de passe de l’événement" />
-    </div>
-
-    <hr style="margin:2rem 0;">
-
-    <strong>Source des invités</strong>
-
-    <div class="mode-selector">
-      <label>
-        <input type="radio" name="mode" id="modeCsv" checked />
-        📄 Import CSV
-      </label>
-      <label>
-        <input type="radio" name="mode" id="modeSheet" />
-        📊 Google Sheet
-      </label>
-    </div>
-
-    <h4 id="uploadTitle">Importer votre fichier CSV</h4>
-    <input type="file" id="guests" accept=".csv" />
-
-    <hr style="margin:2rem 0;">
-
-    <!-- ===== IMAGES OPTIONNELLES ===== -->
-    <h4>Images par table (optionnel)</h4>
-    <p style="font-size:0.9rem; color:#6b5a4a;">
-      Vous pouvez associer une image à certaines tables (facultatif).
-    </p>
-
-    <div id="tableImageRows"></div>
-
-    <button
-      id="addTableImageRow"
-      style="max-width:260px; margin-bottom:2rem;"
-    >
-      ➕ Ajouter une table
-    </button>
-
-    <!-- ===== ACTION PRINCIPALE ===== -->
-    <hr style="margin:2.5rem 0;">
-
-    <div style="text-align:center;">
-      <p style="font-weight:600; margin-bottom:0.5rem;">
-        Une fois tout prêt :
-      </p>
-
-      <button
-        id="createEventBtn"
-        style="max-width:360px; font-size:1.1rem;"
-      >
-        ✅ Créer l’événement
-      </button>
-    </div>
-
-    <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
-
-  </div>
-</section>
  
 /* ================= TABLE IMAGES ================= */
 function addTableImageRow() {
