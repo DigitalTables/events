@@ -246,83 +246,7 @@ usernameInput.onblur = async () => {
   usernameStatus.style.color = exists ? "red" : "green";
 };
 
-/* ================= TABLE IMAGES ================= */
-function addTableImageRow() {
-  const div = document.createElement("div");
-  div.style.marginBottom = "0.5rem";
-  div.innerHTML = `
-    <input type="text" placeholder="Nom de la table" />
-    <input type="file" accept="image/*" />
-    <button type="button">❌</button>
-  `;
-  div.querySelector("button").onclick = () => div.remove();
-  tableImageRows.appendChild(div);
-}
-addTableImageRowBtn.onclick = addTableImageRow;
 
-/* ================= CREATE EVENT ================= */
-createEventBtn.onclick = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return alert("Connecte-toi");
-
-  const username = usernameInput.value.trim();
-  if (!username) return alert("Identifiant requis");
-
-  const isPrivate = privateCsvCheckbox.checked;
-  const passwordEvent = eventPasswordInput.value.trim();
-  if (isPrivate && !passwordEvent) return alert("Mot de passe requis");
-
-  const mode = modeCsv.checked ? "csv" : "sheet";
-
-  try {
-    createEventBtn.disabled = true;
-    createEventBtn.textContent = "Création…";
-
-    let signedUrl = null;
-
-    if (mode === "csv") {
-      const file = csvInput.files[0];
-      if (!file) throw new Error("CSV manquant");
-
-      const text = await file.text();
-      const parsed = Papa.parse(text, { header: true }).data;
-
-      await supabase.storage
-        .from("guests")
-        .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
-
-      if (!isPrivate) {
-        await supabase.storage
-          .from("public-guests")
-          .upload(
-            `guests_${username}.json`,
-            new Blob([JSON.stringify(parsed)]),
-            { upsert: true }
-          );
-        signedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/guests_${username}.json`;
-      }
-    }
-
-    await supabase.from("events").upsert({
-      username,
-      is_private: isPrivate,
-      event_password: isPrivate ? passwordEvent : null,
-      signed_url: signedUrl,
-      user_id: user.id,
-      uploaded_at: new Date().toISOString()
-    });
-
-    alert("✅ Événement créé !");
-    loadUserUploads().then(enforceEventLimit);
-
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    createEventBtn.disabled = false;
-    createEventBtn.textContent = "Créer l’événement";
-  }
-};
 
 /* ================= DASHBOARD ================= */
 async function loadUserUploads() {
@@ -427,6 +351,86 @@ if (e.google_sheet_url && e.is_private) {
     container.appendChild(card);
   }
 }
+
+  
+/* ================= TABLE IMAGES ================= */
+function addTableImageRow() {
+  const div = document.createElement("div");
+  div.style.marginBottom = "0.5rem";
+  div.innerHTML = `
+    <input type="text" placeholder="Nom de la table" />
+    <input type="file" accept="image/*" />
+    <button type="button">❌</button>
+  `;
+  div.querySelector("button").onclick = () => div.remove();
+  tableImageRows.appendChild(div);
+}
+addTableImageRowBtn.onclick = addTableImageRow;
+
+/* ================= CREATE EVENT ================= */
+createEventBtn.onclick = async () => {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("Connecte-toi");
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("Identifiant requis");
+
+  const isPrivate = privateCsvCheckbox.checked;
+  const passwordEvent = eventPasswordInput.value.trim();
+  if (isPrivate && !passwordEvent) return alert("Mot de passe requis");
+
+  const mode = modeCsv.checked ? "csv" : "sheet";
+
+  try {
+    createEventBtn.disabled = true;
+    createEventBtn.textContent = "Création…";
+
+    let signedUrl = null;
+
+    if (mode === "csv") {
+      const file = csvInput.files[0];
+      if (!file) throw new Error("CSV manquant");
+
+      const text = await file.text();
+      const parsed = Papa.parse(text, { header: true }).data;
+
+      await supabase.storage
+        .from("guests")
+        .upload(`guests_${username}.csv`, new Blob([text]), { upsert: true });
+
+      if (!isPrivate) {
+        await supabase.storage
+          .from("public-guests")
+          .upload(
+            `guests_${username}.json`,
+            new Blob([JSON.stringify(parsed)]),
+            { upsert: true }
+          );
+        signedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/guests_${username}.json`;
+      }
+    }
+
+    await supabase.from("events").upsert({
+      username,
+      is_private: isPrivate,
+      event_password: isPrivate ? passwordEvent : null,
+      signed_url: signedUrl,
+      user_id: user.id,
+      uploaded_at: new Date().toISOString()
+    });
+
+    alert("✅ Événement créé !");
+    loadUserUploads().then(enforceEventLimit);
+
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    createEventBtn.disabled = false;
+    createEventBtn.textContent = "Créer l’événement";
+  }
+};
+
 
 /* ================= LIMIT ================= */
 async function enforceEventLimit() {
