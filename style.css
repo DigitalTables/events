@@ -429,3 +429,28 @@ footer {
   margin-top: 1rem;
 }
 
+
+.dashboard-grid > div {
+  background: #f8f5f0;
+  padding: 1.25rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.dashboard-grid button {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.dashboard-grid hr {
+  border: none;
+  border-top: 1px dashed #d0bfae;
+  margin: 0.75rem 0;
+}
+
+.dashboard-grid .danger {
+  background: #c9302c;
+  color: #fff;
+}
+
