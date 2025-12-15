@@ -406,3 +406,70 @@ footer {
   padding: 1rem 0;
   font-size: .9rem;
 }
+/* ================================
+   UI APP (DASHBOARD / CARDS)
+================================ */
+
+.card {
+  background: var(--light);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  max-width: 720px;
+  margin: 2rem auto;
+}
+
+.card.soft {
+  background: #f8f5f0;
+  box-shadow: none;
+  border: 1px solid #eee;
+}
+
+.hint {
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+  color: #6b5a4a;
+}
+
+.mode-selector {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.mode-selector label {
+  flex: 1;
+  padding: 1rem;
+  background: var(--secondary);
+  border-radius: 12px;
+  border: 1px solid var(--accent);
+  text-align: center;
+  cursor: pointer;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.dashboard-grid > div {
+  background: var(--light);
+  border-radius: 14px;
+  padding: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+button.danger {
+  background: #b03a2e !important;
+  color: white !important;
+  width: 100%;
+}
+
+button.secondary {
+  background: #6b5a4a !important;
+  color: white !important;
+  width: 100%;
+}
+
