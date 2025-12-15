@@ -352,7 +352,12 @@ async function loadUserUploads() {
       <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
       ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
 
-/* SYNC PRIVATE SHEET */
+
+      
+      <button class="danger">🔥 Supprimer définitivement</button>
+    `;
+
+    /* SYNC PRIVATE SHEET */
 if (e.google_sheet_url && e.is_private) {
   const syncOneBtn = document.createElement("button");
   syncOneBtn.textContent = "Sync CSV privé";
@@ -365,23 +370,23 @@ if (e.google_sheet_url && e.is_private) {
     syncOneBtn.textContent = "Sync...";
     syncOneBtn.disabled = true;
 
-    try {
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            event_id: e.id,
-            username: e.username,
-            google_sheet_url: e.google_sheet_url,
-            password: e.event_password
-          })
-        }
-      );
+    try {const res = await fetch(
+  `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      event_id: e.id,
+      username: e.username,
+      google_sheet_url: e.google_sheet_url,
+      password: e.event_password
+    })
+  }
+);
+  
 
       let data = {};
       try {
@@ -412,9 +417,6 @@ if (e.google_sheet_url && e.is_private) {
   }
 }
 
-      
-      <button class="danger">🔥 Supprimer définitivement</button>
-    `;
 
     card.querySelector("button").onclick = async () => {
       if (!confirm("Supprimer définitivement ?")) return;
