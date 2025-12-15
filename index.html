@@ -405,11 +405,13 @@ if (e.google_sheet_url && e.is_private) {
 
   if (e.updated_at) {
     const syncInfo = document.createElement("div");
-    syncInfo.textContent = "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
+    syncInfo.textContent =
+      "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
     syncInfo.style.fontSize = "0.85rem";
     card.appendChild(syncInfo);
   }
 }
+
       
       <button class="danger">🔥 Supprimer définitivement</button>
     `;
