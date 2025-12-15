@@ -265,6 +265,14 @@ async function loadUserUploads() {
   const container = document.getElementById("eventsContainer");
   container.innerHTML = "";
 
+  // ✅ Masquer la création d'événement si au moins un existe
+  const uploadDiv = document.getElementById("upload");
+  if (events?.length > 0) {
+    uploadDiv.style.display = "none";
+  } else {
+    uploadDiv.style.display = "block";
+  }
+
   if (!events?.length) {
     container.textContent = "Aucun événement pour l’instant.";
     return;
