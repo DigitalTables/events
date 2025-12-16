@@ -606,7 +606,7 @@ if (isEditing) {
 
   if (error) throw error;
   event_id = insertedEvent.id;
-}
+
 
 
       const session = await supabase.auth.getSession();
@@ -654,12 +654,14 @@ if (isEditing) {
       alert("✅ Google Sheet assignée !");
       loadUserUploads().then(enforceEventLimit);
 
-    } catch (err) {
+} catch (err) {
       alert("❌ Erreur création Google Sheet : " + (err.message || err));
-    } finally {
+    } 
+  }
+  finally {
       createEventBtn.textContent = "Créer l'événement";
       createEventBtn.disabled = false;
-    }
+    
   }
 };
 
