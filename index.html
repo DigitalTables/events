@@ -462,10 +462,11 @@ async function uploadImagesMapping(username) {
 /* Create event */
 createEventBtn.onclick = async () => {
   const isEditing = !!editingEvent;
+  console.log("Bouton cliqué, isEditing ?", isEditing);
 
   if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
-  return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
-}
+    return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
+  }
 
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -525,40 +526,38 @@ createEventBtn.onclick = async () => {
         uploaded_at: new Date().toISOString(),
         images_mapping: imagesMapping
       };
-let event_id = editingEvent?.id;
+      let event_id = editingEvent?.id;
 
-if (isEditing) {
-  // ✏️ UPDATE événement existant
-  const { error } = await supabase
-    .from("events")
-    .update({
-      signed_url: publicOrSignedUrl,
-      images_mapping: imagesMapping,
-      google_sheet_url: null,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", editingEvent.id);
+      if (isEditing) {
+        // ✏️ UPDATE événement existant
+        const { error } = await supabase
+          .from("events")
+          .update({
+            signed_url: publicOrSignedUrl,
+            images_mapping: imagesMapping,
+            google_sheet_url: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", editingEvent.id);
+        if (error) throw error;
+      } else {
+        // ➕ CRÉATION événement
+        const { data: insertedEvent, error } = await supabase
+          .from("events")
+          .insert(eventObj)
+          .select()
+          .single();
+        if (error) throw error;
+        event_id = insertedEvent.id;
+      }
 
-  if (error) throw error;
-} else {
-  // ➕ CRÉATION événement
-      const { data: insertedEvent, error } = await supabase
-  .from("events")
-  .insert(eventObj)
-  .select()
-  .single();
-
-if (error) throw error;
-event_id = insertedEvent.id;
-
-}
       const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
       publicUrlDiv.innerHTML = isPrivate
         ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
         : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
       alert("✅ Événement créé via CSV !");
-     loadUserUploads().then(enforceEventLimit);
+      loadUserUploads().then(enforceEventLimit);
 
     } catch (err) {
       alert("❌ Erreur création événement CSV : " + (err.message || err));
@@ -583,86 +582,80 @@ event_id = insertedEvent.id;
         uploaded_at: new Date().toISOString(),
         images_mapping: imagesMapping
       };
-let event_id = editingEvent?.id;
+      let event_id = editingEvent?.id;
 
-if (isEditing) {
-  // ✏️ UPDATE événement existant
-  const { error } = await supabase
-    .from("events")
-    .update({
-      images_mapping: imagesMapping,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", editingEvent.id);
-
-  if (error) throw error;
-} else {
-  // ➕ CRÉATION événement
-  const { data: insertedEvent, error } = await supabase
-    .from("events")
-    .insert(eventObj)
-    .select()
-    .single();
-
-  if (error) throw error;
-  event_id = insertedEvent.id;
-
-
-
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      if (!accessToken) throw new Error("Token introuvable, reconnecte-toi.");
-
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            username,
-            user_id: user.id,
-            event_id,
-            is_public_event: !isPrivate
+      if (isEditing) {
+        // ✏️ UPDATE événement existant
+        const { error } = await supabase
+          .from("events")
+          .update({
+            images_mapping: imagesMapping,
+            updated_at: new Date().toISOString()
           })
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
+          .eq("id", editingEvent.id);
+        if (error) throw error;
+      } else {
+        // ➕ CRÉATION événement
+        const { data: insertedEvent, error } = await supabase
+          .from("events")
+          .insert(eventObj)
+          .select()
+          .single();
+        if (error) throw error;
+        event_id = insertedEvent.id;
 
-      const sheetEditUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
-      const publicCsvUrl = data.is_public_event
-        ? `https://docs.google.com/spreadsheets/d/${data.sheet_id}/gviz/tq?tqx=out:csv&sheet=Invités`
-        : null;
+        // ✅ assign-google-sheet uniquement lors de la création
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) throw new Error("Token introuvable, reconnecte-toi.");
 
-      await supabase
-        .from("events")
-        .update({
-          google_sheet_url: sheetEditUrl,
-          signed_url: publicCsvUrl || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", event_id);
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              username,
+              user_id: user.id,
+              event_id,
+              is_public_event: !isPrivate
+            })
+          }
+        );
 
-      publicUrlDiv.innerHTML = `
-        📊 Google Sheet créée : <br>
-        <a href="${sheetEditUrl}" target="_blank">${sheetEditUrl}</a>
-        ${publicCsvUrl ? `<br><code>${publicCsvUrl}</code>` : ""}
-      `;
-      alert("✅ Google Sheet assignée !");
-      loadUserUploads().then(enforceEventLimit);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
 
- catch (err) {
+        const sheetEditUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
+        const publicCsvUrl = data.is_public_event
+          ? `https://docs.google.com/spreadsheets/d/${data.sheet_id}/gviz/tq?tqx=out:csv&sheet=Invités`
+          : null;
+
+        await supabase
+          .from("events")
+          .update({
+            google_sheet_url: sheetEditUrl,
+            signed_url: publicCsvUrl || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", event_id);
+
+        publicUrlDiv.innerHTML = `
+          📊 Google Sheet créée : <br>
+          <a href="${sheetEditUrl}" target="_blank">${sheetEditUrl}</a>
+          ${publicCsvUrl ? `<br><code>${publicCsvUrl}</code>` : ""}
+        `;
+        alert("✅ Google Sheet assignée !");
+      }
+    } catch (err) {
       alert("❌ Erreur création Google Sheet : " + (err.message || err));
-    } 
-  
-  finally {
+    } finally {
       createEventBtn.textContent = "Créer l'événement";
       createEventBtn.disabled = false;
-    
-  }
+    }
   }
 };
 
