@@ -398,7 +398,7 @@ createEventBtn.onclick = async () => {
   const mode = modeCsv.checked ? "csv" : "sheet";
 
   try {
-    alert("Create Event try");
+  
     createEventBtn.disabled = true;
     createEventBtn.textContent = "Création…";
 
@@ -427,14 +427,22 @@ createEventBtn.onclick = async () => {
       }
     }
 
-    await supabase.from("events").upsert({
+   const { data, error } = await supabase
+  .from("events")
+  .upsert(
+    {
       username,
       is_private: isPrivate,
       event_password: isPrivate ? passwordEvent : null,
       signed_url: signedUrl,
       user_id: user.id,
       uploaded_at: new Date().toISOString()
-    });
+    },
+    { onConflict: "username" }
+  );
+
+if (error) throw error;
+
 
     alert("✅ Événement créé !");
     loadUserUploads().then(enforceEventLimit);
