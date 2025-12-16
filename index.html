@@ -168,6 +168,7 @@ const addTableImageRowBtn = document.getElementById("addTableImageRow");
 const modeCsv = document.getElementById("modeCsv");
 const modeSheet = document.getElementById("modeSheet");
 const uploadTitle = document.getElementById("uploadTitle");
+let editingEvent = null; // contiendra l’event si édition
 
 /* ================= UI ================= */
 privateCsvCheckbox.onchange = () => {
@@ -290,17 +291,35 @@ async function loadUserUploads() {
   }
 
   for (const e of events) {
-    const card = document.createElement("div");
+   const card = document.createElement("div");
 
-    card.innerHTML = `
-      <h4>${e.username}</h4>
-      <a href="/events/tables.html?event=${e.username}" target="_blank">Lien événement</a>
-      ${e.google_sheet_url ? `<a href="${e.google_sheet_url}" target="_blank">📊 Google Sheet</a>` : ""}
+const title = document.createElement("h4");
+title.textContent = e.username;
 
+const eventLink = document.createElement("a");
+eventLink.href = `/events/tables.html?event=${e.username}`;
+eventLink.target = "_blank";
+eventLink.textContent = "Lien événement";
 
-      
-      <button class="danger">🔥 Supprimer définitivement</button>
-    `;
+card.appendChild(title);
+card.appendChild(eventLink);
+
+if (e.google_sheet_url) {
+  const sheetLink = document.createElement("a");
+  sheetLink.href = e.google_sheet_url;
+  sheetLink.target = "_blank";
+  sheetLink.textContent = "📊 Google Sheet";
+  card.appendChild(sheetLink);
+}
+
+const editBtn = document.createElement("button");
+editBtn.textContent = "✏️ Modifier";
+editBtn.onclick = () => {
+  editingEvent = e;
+  enterEditMode(e);
+};
+card.appendChild(editBtn);
+
 
     /* SYNC PRIVATE SHEET */
 if (e.google_sheet_url && e.is_private) {
@@ -363,11 +382,18 @@ if (e.google_sheet_url && e.is_private) {
 }
 
 
-    card.querySelector("button").onclick = async () => {
-      if (!confirm("Supprimer définitivement ?")) return;
-      await supabase.from("events").update({ deleted: true }).eq("id", e.id);
-      loadUserUploads();
-    };
+    const deleteBtn = document.createElement("button");
+deleteBtn.className = "danger";
+deleteBtn.textContent = "🔥 Supprimer définitivement";
+
+deleteBtn.onclick = async () => {
+  if (!confirm("Supprimer définitivement ?")) return;
+  await supabase.from("events").update({ deleted: true }).eq("id", e.id);
+  loadUserUploads();
+};
+
+card.appendChild(deleteBtn);
+
 
     container.appendChild(card);
   }
@@ -376,17 +402,20 @@ if (e.google_sheet_url && e.is_private) {
 
  
 /* ================= TABLE IMAGES ================= */
-function addTableImageRow() {
+function addTableImageRow(tableName = "") {
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
+
   div.innerHTML = `
-    <input type="text" placeholder="Nom de la table" />
+    <input type="text" placeholder="Nom de la table" value="${tableName}" />
     <input type="file" accept="image/*" />
     <button type="button">❌</button>
   `;
+
   div.querySelector("button").onclick = () => div.remove();
   tableImageRows.appendChild(div);
 }
+
 addTableImageRowBtn.onclick = addTableImageRow;
 
 async function uploadImagesMapping(username) {
@@ -432,6 +461,11 @@ async function uploadImagesMapping(username) {
   
 /* Create event */
 createEventBtn.onclick = async () => {
+  const isEditing = !!editingEvent;
+  if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
+  return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
+}
+
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return alert("❌ Connecte-toi.");
@@ -490,14 +524,33 @@ createEventBtn.onclick = async () => {
         uploaded_at: new Date().toISOString(),
         images_mapping: imagesMapping
       };
+let event_id = editingEvent?.id;
 
-      const { data: insertedEvent, error: upsertErr } = await supabase
-        .from("events")
-        .upsert(eventObj, { onConflict: "username" })
-        .select()
-        .single();
-      if (upsertErr) throw upsertErr;
+if (isEditing) {
+  // ✏️ UPDATE événement existant
+  const { error } = await supabase
+    .from("events")
+    .update({
+      signed_url: publicOrSignedUrl,
+      images_mapping: imagesMapping,
+      google_sheet_url: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", editingEvent.id);
 
+  if (error) throw error;
+} else {
+  // ➕ CRÉATION événement
+      const { data: insertedEvent, error } = await supabase
+  .from("events")
+  .insert(eventObj)
+  .select()
+  .single();
+
+if (error) throw error;
+event_id = insertedEvent.id;
+
+}
       const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
       publicUrlDiv.innerHTML = isPrivate
         ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
@@ -529,13 +582,32 @@ createEventBtn.onclick = async () => {
         uploaded_at: new Date().toISOString(),
         images_mapping: imagesMapping
       };
-      const { data: insertedEvent, error: upsertErr } = await supabase
-        .from("events")
-        .upsert(eventObj, { onConflict: "username" })
-        .select()
-        .single();
-      if (upsertErr) throw upsertErr;
-      const event_id = insertedEvent.id;
+let event_id = editingEvent?.id;
+
+if (isEditing) {
+  // ✏️ UPDATE événement existant
+  const { error } = await supabase
+    .from("events")
+    .update({
+      images_mapping: imagesMapping,
+      signed_url: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", editingEvent.id);
+
+  if (error) throw error;
+} else {
+  // ➕ CRÉATION événement
+  const { data: insertedEvent, error } = await supabase
+    .from("events")
+    .insert(eventObj)
+    .select()
+    .single();
+
+  if (error) throw error;
+  event_id = insertedEvent.id;
+}
+
 
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
@@ -591,7 +663,36 @@ createEventBtn.onclick = async () => {
   }
 };
 
+/* Edit Mode */
+function enterEditMode(event) {
+  uploadDiv.style.display = "block";
 
+  usernameInput.value = event.username;
+  usernameInput.disabled = true;
+
+  privateCsvCheckbox.checked = event.is_private;
+  passwordDiv.style.display = "none"; // mot de passe non modifiable
+
+  eventPasswordInput.value = "";
+
+  modeCsv.checked = !event.google_sheet_url;
+  modeSheet.checked = !!event.google_sheet_url;
+  updateModeUI();
+
+  publicUrlDiv.innerHTML = "✏️ Modification de l’événement existant";
+
+  // Recharger images existantes
+  tableImageRows.innerHTML = "";
+  if (event.images_mapping) {
+    for (const table in event.images_mapping) {
+      addTableImageRow(table);
+    }
+  }
+
+  createEventBtn.textContent = "💾 Enregistrer les modifications";
+}
+
+  
 /* ================= LIMIT ================= */
 async function enforceEventLimit() {
   const { data: userData } = await supabase.auth.getUser();
