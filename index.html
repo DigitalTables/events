@@ -254,7 +254,7 @@ async function checkUsernameExists(username) {
 usernameInput.onblur = async () => {
   const u = usernameInput.value.trim();
   if (!u) return usernameStatus.textContent = "";
-  const exists = await checkPublicJsonExists(u);
+  const exists = await checkUsernameExists(u);
   usernameStatus.textContent = exists ? "❌ Identifiant déjà utilisé" : "✔ Disponible";
   usernameStatus.style.color = exists ? "red" : "green";
 };
