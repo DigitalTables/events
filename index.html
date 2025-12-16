@@ -462,7 +462,7 @@ async function uploadImagesMapping(username) {
 /* Create event */
 createEventBtn.onclick = async () => {
   const isEditing = !!editingEvent;
-console.log("Bouton cliqué,isEditing ?", isEditing);
+
   if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
   return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
 }
@@ -654,14 +654,15 @@ if (isEditing) {
       alert("✅ Google Sheet assignée !");
       loadUserUploads().then(enforceEventLimit);
 
-} catch (err) {
+ catch (err) {
       alert("❌ Erreur création Google Sheet : " + (err.message || err));
     } 
-  }
+  
   finally {
       createEventBtn.textContent = "Créer l'événement";
       createEventBtn.disabled = false;
     
+  }
   }
 };
 
