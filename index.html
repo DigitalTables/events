@@ -590,7 +590,6 @@ if (isEditing) {
     .from("events")
     .update({
       images_mapping: imagesMapping,
-      signed_url: null,
       updated_at: new Date().toISOString()
     })
     .eq("id", editingEvent.id);
