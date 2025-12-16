@@ -460,7 +460,7 @@ async function uploadImagesMapping(username) {
 
   
 /* Create event */
-createEventBtn.addEventListener("click", async () => {
+createEventBtn.onclick = async () => {
   const isEditing = !!editingEvent;
 console.log("Bouton cliqué,isEditing ?", isEditing);
   if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
@@ -661,12 +661,12 @@ if (isEditing) {
       createEventBtn.disabled = false;
     }
   }
-});
+};
 
 /* Edit Mode */
 function enterEditMode(event) {
   uploadDiv.style.display = "block";
-
+  createEventBtn.disabled = false;  // activer le bouton
   usernameInput.value = event.username;
   usernameInput.disabled = true;
 
