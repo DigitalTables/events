@@ -460,9 +460,9 @@ async function uploadImagesMapping(username) {
 
   
 /* Create event */
-createEventBtn.onclick = async () => {
+createEventBtn.addEventListener("click", async () => {
   const isEditing = !!editingEvent;
-console.log("isEditing ?", isEditing);
+console.log("Bouton cliqué,isEditing ?", isEditing);
   if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
   return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
 }
