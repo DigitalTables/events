@@ -389,6 +389,47 @@ function addTableImageRow() {
 }
 addTableImageRowBtn.onclick = addTableImageRow;
 
+async function uploadImagesMapping(username) {
+  const rows = tableImageRows.querySelectorAll("div");
+  const mapping = {};
+
+  for (const row of rows) {
+    const tableInput = row.querySelector("input[type='text']");
+    const fileInput = row.querySelector("input[type='file']");
+
+    if (!tableInput || !fileInput) continue;
+
+    const tableName = tableInput.value.trim();
+    const file = fileInput.files[0];
+
+    if (!tableName || !file) continue;
+
+    // 🔐 Nettoyage minimal du nom de fichier
+    const safeTableName = tableName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9-_]/g, "-");
+
+    const extension = file.name.split(".").pop();
+    const filePath = `${username}/${safeTableName}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from("images")
+      .upload(filePath, file, { upsert: true });
+
+    if (error) {
+      throw new Error("Erreur upload image table : " + error.message);
+    }
+
+    // ⚠️ IMPORTANT : on stocke le PATH, PAS l'URL
+    mapping[tableName] = filePath;
+  }
+
+  return mapping;
+}
+
+  
 /* Create event */
 createEventBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
