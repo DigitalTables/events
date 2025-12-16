@@ -385,6 +385,7 @@ addTableImageRowBtn.onclick = addTableImageRow;
 createEventBtn.onclick = async () => {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
+  alert("Click create Event !");
   if (!user) return alert("Connecte-toi");
 
   const username = usernameInput.value.trim();
@@ -397,6 +398,7 @@ createEventBtn.onclick = async () => {
   const mode = modeCsv.checked ? "csv" : "sheet";
 
   try {
+    alert("Create Event try");
     createEventBtn.disabled = true;
     createEventBtn.textContent = "Création…";
 
