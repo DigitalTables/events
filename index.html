@@ -236,11 +236,19 @@ login.onclick = async () => {
 };
 
 /* ================= USERNAME CHECK ================= */
-async function checkPublicJsonExists(username) {
-  const { data } = await supabase.storage
-    .from("public-guests")
-    .list("", { search: `guests_${username}.json` });
-  return data?.some(f => f.name === `guests_${username}.json`);
+async function checkUsernameExists(username) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("user_id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return true; // par sécurité
+  }
+
+  return !!data;
 }
 
 usernameInput.onblur = async () => {
