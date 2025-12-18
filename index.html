@@ -29,16 +29,21 @@
   <button id="logout" style="display:none; max-width:300px;">Se déconnecter</button>
 </div>
 
+<!-- ================= AUTH ================= -->
 <section id="auth">
   <div class="container" style="max-width:480px;">
     <h3 style="text-align:center;">Connexion / Inscription</h3>
+
     <input type="email" id="email" placeholder="Email" />
     <input type="password" id="password" placeholder="Mot de passe" />
+
     <button id="signup">Créer un compte</button>
     <button id="login">Se connecter</button>
   </div>
 </section>
 
+
+<!-- ================= DASHBOARD ================= -->
 <section id="dashboard" style="display:none;">
   <div class="container">
     <h3 style="text-align:center;">Mes événements</h3>
@@ -46,6 +51,9 @@
   </div>
 </section>
 
+
+
+ <!-- ================= CREATE EVENT ================= -->
 <section id="upload" style="display:none;">
   <div class="container" style="max-width:720px;">
 
@@ -87,6 +95,7 @@
 
     <hr style="margin:2rem 0;">
 
+    <!-- ===== IMAGES OPTIONNELLES ===== -->
     <h4>Images par table (optionnel)</h4>
     <p style="font-size:0.9rem; color:#6b5a4a;">
       Vous pouvez associer une image à certaines tables (facultatif).
@@ -94,15 +103,25 @@
 
     <div id="tableImageRows"></div>
 
-    <button id="addTableImageRow" style="max-width:260px; margin-bottom:2rem;">
+    <button
+      id="addTableImageRow"
+      style="max-width:260px; margin-bottom:2rem;"
+    >
       ➕ Ajouter une table
     </button>
 
+    <!-- ===== ACTION PRINCIPALE ===== -->
     <hr style="margin:2.5rem 0;">
 
     <div style="text-align:center;">
-      <p style="font-weight:600; margin-bottom:0.5rem;">Une fois tout prêt :</p>
-      <button id="createEventBtn" style="max-width:360px; font-size:1.1rem;">
+      <p style="font-weight:600; margin-bottom:0.5rem;">
+        Une fois tout prêt :
+      </p>
+
+      <button
+        id="createEventBtn"
+        style="max-width:360px; font-size:1.1rem;"
+      >
         ✅ Créer l’événement
       </button>
     </div>
@@ -110,24 +129,279 @@
     <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
 
   </div>
-</section>
 
 <footer>
   <div class="container">
     <p>© 2025 DigitalTables. Tous droits réservés.</p>
   </div>
 </footer>
+  
+</section>
 
+  
+<!-- ================= SCRIPT ================= -->
 <script type="module">
-import { supabase, SUPABASE_URL } from './supabase.js';
+import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
 
-/* DOM */
+/* ================= DOM ================= */
+const authDiv = document.getElementById("auth");
+const uploadDiv = document.getElementById("upload");
+const dashboardDiv = document.getElementById("dashboard");
+const logoutBtn = document.getElementById("logout");
+
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const signup = document.getElementById("signup");
+const login = document.getElementById("login");
+
+const createEventBtn = document.getElementById("createEventBtn");
+const csvInput = document.getElementById("guests");
+const usernameInput = document.getElementById("username");
+const usernameStatus = document.getElementById("usernameStatus");
+const privateCsvCheckbox = document.getElementById("privateCsv");
+const passwordDiv = document.getElementById("passwordDiv");
+const eventPasswordInput = document.getElementById("eventPassword");
+const publicUrlDiv = document.getElementById("publicUrl");
 const tableImageRows = document.getElementById("tableImageRows");
 const addTableImageRowBtn = document.getElementById("addTableImageRow");
-let editingEvent = null;
+const modeCsv = document.getElementById("modeCsv");
+const modeSheet = document.getElementById("modeSheet");
+const uploadTitle = document.getElementById("uploadTitle");
+let editingEvent = null; // contiendra l’event si édition
 
-/* TABLE IMAGES */
+/* ================= UI ================= */
+privateCsvCheckbox.onchange = () => {
+  passwordDiv.style.display = privateCsvCheckbox.checked ? "block" : "none";
+};
+
+function updateModeUI() {
+  if (modeCsv.checked) {
+    uploadTitle.textContent = "Importer votre fichier CSV";
+    csvInput.style.display = "block";
+  } else {
+    uploadTitle.textContent = "Les invités seront gérés via Google Sheet";
+    csvInput.style.display = "none";
+  }
+}
+modeCsv.onchange = updateModeUI;
+modeSheet.onchange = updateModeUI;
+updateModeUI();
+
+/* ================= AUTH ================= */
+supabase.auth.getSession().then(({ data }) => {
+  data.session ? onLogin() : onLogout();
+});
+supabase.auth.onAuthStateChange((_e, s) => {
+  s ? onLogin() : onLogout();
+});
+
+function onLogin() {
+  authDiv.style.display = "none";
+  uploadDiv.style.display = "block";
+  logoutBtn.style.display = "inline-block";
+  dashboardDiv.style.display = "block";
+  loadUserUploads().then(enforceEventLimit);
+}
+
+function onLogout() {
+  authDiv.style.display = "block";
+  uploadDiv.style.display = "none";
+  logoutBtn.style.display = "none";
+  dashboardDiv.style.display = "none";
+}
+
+logoutBtn.onclick = async () => {
+  await supabase.auth.signOut();
+};
+
+/* ================= SIGNUP / LOGIN ================= */
+signup.onclick = async () => {
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value
+  });
+  if (error) return alert(error.message);
+  await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+};
+
+login.onclick = async () => {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+  if (error) alert(error.message);
+};
+
+/* ================= USERNAME CHECK ================= */
+async function checkUsernameExists(username) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("user_id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return true; // par sécurité
+  }
+
+  return !!data;
+}
+
+usernameInput.onblur = async () => {
+  const u = usernameInput.value.trim();
+  if (!u) return usernameStatus.textContent = "";
+  const exists = await checkUsernameExists(u);
+  usernameStatus.textContent = exists ? "❌ Identifiant déjà utilisé" : "✔ Disponible";
+  usernameStatus.style.color = exists ? "red" : "green";
+};
+
+
+
+/* ================= DASHBOARD ================= */
+async function loadUserUploads() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return;
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  const container = document.getElementById("eventsContainer");
+  container.innerHTML = "";
+
+  // ✅ Masquer la création d'événement si au moins un existe
+ 
+  if (events?.length > 0) {
+    uploadDiv.style.display = "none";
+  } else {
+    uploadDiv.style.display = "block";
+  }
+
+  if (!events?.length) {
+    container.textContent = "Aucun événement pour l’instant.";
+    return;
+  }
+
+  for (const e of events) {
+   const card = document.createElement("div");
+
+const title = document.createElement("h4");
+title.textContent = e.username;
+
+const eventLink = document.createElement("a");
+eventLink.href = `/events/tables.html?event=${e.username}`;
+eventLink.target = "_blank";
+eventLink.textContent = "Lien événement";
+
+card.appendChild(title);
+card.appendChild(eventLink);
+
+if (e.google_sheet_url) {
+  const sheetLink = document.createElement("a");
+  sheetLink.href = e.google_sheet_url;
+  sheetLink.target = "_blank";
+  sheetLink.textContent = "📊 Google Sheet";
+  card.appendChild(sheetLink);
+}
+
+const editBtn = document.createElement("button");
+editBtn.textContent = "✏️ Modifier";
+editBtn.onclick = () => {
+  editingEvent = e;
+  enterEditMode(e);
+};
+card.appendChild(editBtn);
+
+
+    /* SYNC PRIVATE SHEET */
+if (e.google_sheet_url && e.is_private) {
+  const syncOneBtn = document.createElement("button");
+  syncOneBtn.textContent = "Sync Google sheet privée";
+
+  syncOneBtn.onclick = async () => {
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+    if (!accessToken) return alert("❌ Connecte-toi.");
+
+    syncOneBtn.textContent = "Sync...";
+    syncOneBtn.disabled = true;
+
+    try {const res = await fetch(
+  `${SUPABASE_URL}/functions/v1/sync-privatesheet-csv`,
+  {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      event_id: e.id,
+      username: e.username,
+      google_sheet_url: e.google_sheet_url,
+      password: e.event_password
+    })
+  }
+);
+  
+
+      let data = {};
+      try {
+        data = JSON.parse(await res.text());
+      } catch {}
+
+      if (!res.ok) throw new Error(data.error || "Unknown sync error");
+
+      alert("✅ Google Sheet synchronisée !");
+      await loadUserUploads().then(enforceEventLimit);
+
+    } catch (err) {
+      alert("❌ Sync error : " + err.message);
+    } finally {
+      syncOneBtn.textContent = "Sync Google sheet privée";
+      syncOneBtn.disabled = false;
+    }
+  };
+
+  card.appendChild(syncOneBtn);
+
+  if (e.updated_at) {
+    const syncInfo = document.createElement("div");
+    syncInfo.textContent =
+      "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
+    syncInfo.style.fontSize = "0.85rem";
+    card.appendChild(syncInfo);
+  }
+}
+
+
+    const deleteBtn = document.createElement("button");
+deleteBtn.className = "danger";
+deleteBtn.textContent = "🔥 Supprimer définitivement";
+
+deleteBtn.onclick = async () => {
+  if (!confirm("Supprimer définitivement ?")) return;
+  await supabase.from("events").update({ deleted: true }).eq("id", e.id);
+  loadUserUploads();
+};
+
+card.appendChild(deleteBtn);
+
+
+    container.appendChild(card);
+  }
+}
+
+
+ 
+/* ================= TABLE IMAGES ================= */
 function addTableImageRow(tableName = "") {
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
@@ -144,10 +418,9 @@ function addTableImageRow(tableName = "") {
 
 addTableImageRowBtn.onclick = addTableImageRow;
 
-/* ✅ CORRECTION IMAGES — CONSERVATION EN ÉDITION */
-async function uploadImagesMapping(username, existingMapping = {}) {
+async function uploadImagesMapping(username) {
   const rows = tableImageRows.querySelectorAll("div");
-  const mapping = { ...existingMapping };
+  const mapping = {};
 
   for (const row of rows) {
     const tableInput = row.querySelector("input[type='text']");
@@ -158,9 +431,9 @@ async function uploadImagesMapping(username, existingMapping = {}) {
     const tableName = tableInput.value.trim();
     const file = fileInput.files[0];
 
-    if (!tableName) continue;
-    if (!file) continue;
+    if (!tableName || !file) continue;
 
+    // 🔐 Nettoyage minimal du nom de fichier
     const safeTableName = tableName
       .toLowerCase()
       .normalize("NFD")
@@ -178,11 +451,264 @@ async function uploadImagesMapping(username, existingMapping = {}) {
       throw new Error("Erreur upload image table : " + error.message);
     }
 
+    // ⚠️ IMPORTANT : on stocke le PATH, PAS l'URL
     mapping[tableName] = filePath;
   }
 
   return mapping;
 }
+
+  
+/* Create event */
+createEventBtn.onclick = async () => {
+  const isEditing = !!editingEvent;
+  console.log("Bouton cliqué, isEditing ?", isEditing);
+
+  if (isEditing && !editingEvent.is_private && privateCsvCheckbox.checked) {
+    return alert("❌ Un événement public ne peut pas devenir privé. Supprime-le et recrée-en un.");
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return alert("❌ Connecte-toi.");
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("❌ Choisis un identifiant public.");
+
+  const isPrivate = privateCsvCheckbox.checked;
+  const eventPassword = eventPasswordInput.value.trim();
+  if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
+
+  const mode = modeCsv.checked ? "csv" : "sheet";
+
+  let imagesMapping = {};
+  try {
+    imagesMapping = await uploadImagesMapping(username);
+  } catch (e) {
+    return alert(e.message);
+  }
+
+  /* CSV MODE */
+  if (mode === "csv") {
+    const csvFile = csvInput.files[0];
+    if (!csvFile) return alert("❌ Choisis un fichier CSV.");
+
+    createEventBtn.textContent = "Création en cours...";
+    createEventBtn.disabled = true;
+
+    try {
+      const text = await csvFile.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const rows = parsed.data;
+
+      const csvPath = `guests_${username}.csv`;
+      const { error: csvUpErr } = await supabase.storage
+        .from("guests")
+        .upload(csvPath, new Blob([text], { type: "text/csv" }), { upsert: true });
+      if (csvUpErr) throw new Error("Erreur upload CSV: " + csvUpErr.message);
+
+      let publicOrSignedUrl = null;
+      if (!isPrivate) {
+        const publicJson = `guests_${username}.json`;
+        const jsonBlob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+        const { error: jsonUpErr } = await supabase.storage.from("public-guests")
+          .upload(publicJson, jsonBlob, { upsert: true });
+        if (jsonUpErr) throw new Error("Erreur upload JSON: " + jsonUpErr.message);
+        publicOrSignedUrl = `${SUPABASE_URL}/storage/v1/object/public/public-guests/${publicJson}`;
+      }
+
+      const eventObj = {
+        username,
+        event_password: isPrivate ? eventPassword : null,
+        signed_url: publicOrSignedUrl,
+        is_private: isPrivate,
+        user_id: user.id,
+        uploaded_at: new Date().toISOString(),
+        images_mapping: imagesMapping
+      };
+      let event_id = editingEvent?.id;
+
+      if (isEditing) {
+        // ✏️ UPDATE événement existant
+        const { error } = await supabase
+          .from("events")
+          .update({
+            signed_url: publicOrSignedUrl,
+            images_mapping: imagesMapping,
+            google_sheet_url: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", editingEvent.id);
+        if (error) throw error;
+      } else {
+        // ➕ CRÉATION événement
+        const { data: insertedEvent, error } = await supabase
+          .from("events")
+          .insert(eventObj)
+          .select()
+          .single();
+        if (error) throw error;
+        event_id = insertedEvent.id;
+      }
+
+      const eventUrl = `${window.location.origin}/events/tables.html?event=${encodeURIComponent(username)}`;
+      publicUrlDiv.innerHTML = isPrivate
+        ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
+        : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
+
+      alert("✅ Événement créé via CSV !");
+      loadUserUploads().then(enforceEventLimit);
+
+    } catch (err) {
+      alert("❌ Erreur création événement CSV : " + (err.message || err));
+    } finally {
+      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.disabled = false;
+    }
+  }
+
+  /* SHEET MODE */
+  else {
+    createEventBtn.textContent = "Création Google Sheet...";
+    createEventBtn.disabled = true;
+
+    try {
+      const eventObj = {
+        username,
+        event_password: isPrivate ? eventPassword : null,
+        signed_url: null,
+        is_private: isPrivate,
+        user_id: user.id,
+        uploaded_at: new Date().toISOString(),
+        images_mapping: imagesMapping
+      };
+      let event_id = editingEvent?.id;
+
+      if (isEditing) {
+        // ✏️ UPDATE événement existant
+        const { error } = await supabase
+          .from("events")
+          .update({
+            images_mapping: imagesMapping,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", editingEvent.id);
+        if (error) throw error;
+      } else {
+        // ➕ CRÉATION événement
+        const { data: insertedEvent, error } = await supabase
+          .from("events")
+          .insert(eventObj)
+          .select()
+          .single();
+        if (error) throw error;
+        event_id = insertedEvent.id;
+
+        // ✅ assign-google-sheet uniquement lors de la création
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        if (!accessToken) throw new Error("Token introuvable, reconnecte-toi.");
+
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/assign-google-sheet`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              username,
+              user_id: user.id,
+              event_id,
+              is_public_event: !isPrivate
+            })
+          }
+        );
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
+
+        const sheetEditUrl = `https://docs.google.com/spreadsheets/d/${data.sheet_id}/edit`;
+        const publicCsvUrl = data.is_public_event
+          ? `https://docs.google.com/spreadsheets/d/${data.sheet_id}/gviz/tq?tqx=out:csv&sheet=Invités`
+          : null;
+
+        await supabase
+          .from("events")
+          .update({
+            google_sheet_url: sheetEditUrl,
+            signed_url: publicCsvUrl || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", event_id);
+
+        publicUrlDiv.innerHTML = `
+          📊 Google Sheet créée : <br>
+          <a href="${sheetEditUrl}" target="_blank">${sheetEditUrl}</a>
+          ${publicCsvUrl ? `<br><code>${publicCsvUrl}</code>` : ""}
+        `;
+        alert("✅ Google Sheet assignée !");
+      }
+    } catch (err) {
+      alert("❌ Erreur création Google Sheet : " + (err.message || err));
+    } finally {
+      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.disabled = false;
+    }
+  }
+};
+
+/* Edit Mode */
+function enterEditMode(event) {
+  uploadDiv.style.display = "block";
+  createEventBtn.disabled = false;  // activer le bouton
+  usernameInput.value = event.username;
+  usernameInput.disabled = true;
+
+  privateCsvCheckbox.checked = event.is_private;
+  passwordDiv.style.display = "none"; // mot de passe non modifiable
+
+  eventPasswordInput.value = "";
+
+  modeCsv.checked = !event.google_sheet_url;
+  modeSheet.checked = !!event.google_sheet_url;
+  updateModeUI();
+
+  publicUrlDiv.innerHTML = "✏️ Modification de l’événement existant";
+
+  // Recharger images existantes
+  tableImageRows.innerHTML = "";
+  if (event.images_mapping) {
+    for (const table in event.images_mapping) {
+      addTableImageRow(table);
+    }
+  }
+
+  createEventBtn.textContent = "💾 Enregistrer les modifications";
+}
+
+  
+/* ================= LIMIT ================= */
+async function enforceEventLimit() {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  const { data: events } = await supabase
+    .from("events")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("deleted", false);
+
+  createEventBtn.disabled = events.length >= 1;
+}
+
+  /* Format pour la date d'update*/
+  function formatDateWithTimeZone(dateString) {
+  return new Date(dateString).toLocaleString(undefined, {
+    timeZoneName: "short"
+  });
+}
+
 </script>
 
 </body>
