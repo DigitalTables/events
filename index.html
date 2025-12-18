@@ -368,7 +368,7 @@ await supabase
   })
   .eq("id", e.id);
 
-exitEditMode();
+
 await loadUserUploads().then(enforceEventLimit);
 
 
@@ -632,7 +632,6 @@ if (!editingEvent && isPrivate && !eventPassword) {
 
 alert("✅ Fichier CSV correctement envoyé !");
 
-exitEditMode();
 loadUserUploads().then(enforceEventLimit);
 
 
