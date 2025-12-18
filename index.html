@@ -402,9 +402,13 @@ card.appendChild(deleteBtn);
 
  
 /* ================= TABLE IMAGES ================= */
-function addTableImageRow(tableName = "") {
+function addTableImageRow(tableName = "", existingImagePath = null) {
+
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
+if (existingImagePath) {
+  div.dataset.existingImage = existingImagePath;
+}
 
   div.innerHTML = `
     <input type="text" placeholder="Nom de la table" value="${tableName}" />
@@ -432,8 +436,15 @@ async function uploadImagesMapping(username, existingMapping = {}) {
     const tableName = tableInput.value.trim();
     const file = fileInput.files[0];
 
-    if (!tableName) continue;
-if (!file) continue; // garde l’image existante
+   if (!tableName) continue;
+
+if (!file) {
+  if (row.dataset.existingImage) {
+    mapping[tableName] = row.dataset.existingImage;
+  }
+  continue;
+}
+
 
 
     // 🔐 Nettoyage minimal du nom de fichier
@@ -480,7 +491,11 @@ createEventBtn.onclick = async () => {
 
   const isPrivate = privateCsvCheckbox.checked;
   const eventPassword = eventPasswordInput.value.trim();
-  if (isPrivate && !eventPassword) return alert("❌ Définis un mot de passe pour l’événement privé.");
+
+if (!editingEvent && isPrivate && !eventPassword) {
+  return alert("❌ Définis un mot de passe pour l’événement privé.");
+}
+
 
   const mode = modeCsv.checked ? "csv" : "sheet";
 
@@ -688,7 +703,8 @@ function enterEditMode(event) {
   tableImageRows.innerHTML = "";
   if (event.images_mapping) {
     for (const table in event.images_mapping) {
-      addTableImageRow(table);
+      addTableImageRow(table, event.images_mapping[table]);
+
     }
   }
 
