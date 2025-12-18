@@ -360,7 +360,16 @@ if (e.google_sheet_url && e.is_private) {
       if (!res.ok) throw new Error(data.error || "Unknown sync error");
 
       alert("✅ Google Sheet synchronisée !");
-      await loadUserUploads().then(enforceEventLimit);
+
+await supabase
+  .from("events")
+  .update({
+    last_sheet_sync_at: new Date().toISOString()
+  })
+  .eq("id", e.id);
+
+await loadUserUploads().then(enforceEventLimit);
+
 
     } catch (err) {
       alert("❌ Sync error : " + err.message);
@@ -372,13 +381,22 @@ if (e.google_sheet_url && e.is_private) {
 
   card.appendChild(syncOneBtn);
 
-  if (e.updated_at) {
-    const syncInfo = document.createElement("div");
-    syncInfo.textContent =
-      "🔄 Dernière sync : " + formatDateWithTimeZone(e.updated_at);
-    syncInfo.style.fontSize = "0.85rem";
-    card.appendChild(syncInfo);
-  }
+ if (e.last_csv_sync_at) {
+  const csvInfo = document.createElement("div");
+  csvInfo.textContent =
+    "📄 Dernier CSV : " + formatDateWithTimeZone(e.last_csv_sync_at);
+  csvInfo.style.fontSize = "0.85rem";
+  card.appendChild(csvInfo);
+}
+
+if (e.last_sheet_sync_at) {
+  const sheetInfo = document.createElement("div");
+  sheetInfo.textContent =
+    "📊 Dernière Google Sheet : " + formatDateWithTimeZone(e.last_sheet_sync_at);
+  sheetInfo.style.fontSize = "0.85rem";
+  card.appendChild(sheetInfo);
+}
+
 }
 
 
@@ -578,8 +596,16 @@ if (!editingEvent && isPrivate && !eventPassword) {
         ? `🔒 Événement privé créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong>`
         : `🌍 Événement public créé : <br><strong><a href="${eventUrl}" target="_blank">${eventUrl}</a></strong> <br><code>${publicOrSignedUrl}</code>`;
 
-      alert("✅ Événement créé via CSV !");
-      loadUserUploads().then(enforceEventLimit);
+      await supabase
+  .from("events")
+  .update({
+    last_csv_sync_at: new Date().toISOString()
+  })
+  .eq("id", event_id);
+
+alert("✅ Événement créé via CSV !");
+loadUserUploads().then(enforceEventLimit);
+
 
     } catch (err) {
       alert("❌ Erreur création événement CSV : " + (err.message || err));
