@@ -368,6 +368,7 @@ await supabase
   })
   .eq("id", e.id);
 
+exitEditMode();
 await loadUserUploads().then(enforceEventLimit);
 
 
@@ -603,7 +604,7 @@ if (!editingEvent && isPrivate && !eventPassword) {
   })
   .eq("id", event_id);
 
-alert("✅ Événement créé via CSV !");
+alert("✅ Fichier CSV correctement envoyé !");
 loadUserUploads().then(enforceEventLimit);
 
 
@@ -757,6 +758,24 @@ async function enforceEventLimit() {
     timeZoneName: "short"
   });
 }
+
+  /* Exit Edit Mode */
+  function exitEditMode() {
+  editingEvent = null;
+
+  usernameInput.disabled = false;
+  usernameInput.value = "";
+
+  privateCsvCheckbox.checked = false;
+  passwordDiv.style.display = "none";
+  eventPasswordInput.value = "";
+
+  tableImageRows.innerHTML = "";
+  publicUrlDiv.innerHTML = "";
+
+  createEventBtn.textContent = "Créer l'événement";
+}
+
 
 </script>
 
