@@ -407,9 +407,28 @@ deleteBtn.textContent = "🔥 Supprimer définitivement";
 
 deleteBtn.onclick = async () => {
   if (!confirm("Supprimer définitivement ?")) return;
-  await supabase.from("events").update({ deleted: true }).eq("id", e.id);
-  loadUserUploads();
+
+  deleteBtn.textContent = "Suppression...";
+  deleteBtn.disabled = true;
+
+  const { error } = await supabase
+    .from("events")
+    .update({ deleted: true })
+    .eq("id", e.id);
+
+  if (error) {
+    alert("❌ Erreur suppression : " + error.message);
+    deleteBtn.disabled = false;
+    deleteBtn.textContent = "🔥 Supprimer définitivement";
+    return;
+  }
+
+  // ✅ SORTIE PROPRE
+  exitEditMode();
+  await loadUserUploads();
+  await enforceEventLimit();
 };
+
 
 card.appendChild(deleteBtn);
 
