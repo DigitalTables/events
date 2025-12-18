@@ -429,11 +429,22 @@ if (existingImagePath) {
   div.dataset.existingImage = existingImagePath;
 }
 
-  div.innerHTML = `
-    <input type="text" placeholder="Nom de la table" value="${tableName}" />
-    <input type="file" accept="image/*" />
-    <button type="button">❌</button>
-  `;
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+div.innerHTML = `
+  <input type="text" placeholder="Nom de la table" value="${escapeHtml(tableName)}" />
+  <input type="file" accept="image/*" />
+  <button type="button">❌</button>
+`;
+
 
   div.querySelector("button").onclick = () => div.remove();
   tableImageRows.appendChild(div);
