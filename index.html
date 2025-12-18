@@ -469,30 +469,28 @@ addTableImageRowBtn.onclick = () => addTableImageRow();
 
 async function uploadImagesMapping(username, existingMapping = {}) {
   const rows = tableImageRows.querySelectorAll("div");
-  const mapping = { ...existingMapping };
-
+  const mapping = {};
 
   for (const row of rows) {
     const tableInput = row.querySelector("input[type='text']");
     const fileInput = row.querySelector("input[type='file']");
 
-    if (!tableInput || !fileInput) continue;
+    if (!tableInput) continue;
 
     const tableName = tableInput.value.trim();
-    const file = fileInput.files[0];
+    if (!tableName) continue;
 
-   if (!tableName) continue;
+    const file = fileInput?.files?.[0];
 
-if (!file) {
-  if (row.dataset.existingImage) {
-    mapping[tableName] = row.dataset.existingImage;
-  }
-  continue;
-}
+    // 🟢 Cas 1 : aucune nouvelle image → on garde l’existante
+    if (!file) {
+      if (row.dataset.existingImage) {
+        mapping[tableName] = row.dataset.existingImage;
+      }
+      continue;
+    }
 
-
-
-    // 🔐 Nettoyage minimal du nom de fichier
+    // 🟢 Cas 2 : nouvelle image → upload
     const safeTableName = tableName
       .toLowerCase()
       .normalize("NFD")
@@ -510,7 +508,6 @@ if (!file) {
       throw new Error("Erreur upload image table : " + error.message);
     }
 
-    // ⚠️ IMPORTANT : on stocke le PATH, PAS l'URL
     mapping[tableName] = filePath;
   }
 
