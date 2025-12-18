@@ -605,6 +605,8 @@ if (!editingEvent && isPrivate && !eventPassword) {
   .eq("id", event_id);
 
 alert("✅ Fichier CSV correctement envoyé !");
+
+exitEditMode();
 loadUserUploads().then(enforceEventLimit);
 
 
