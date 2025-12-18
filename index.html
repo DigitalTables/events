@@ -450,7 +450,8 @@ div.innerHTML = `
   tableImageRows.appendChild(div);
 }
 
-addTableImageRowBtn.onclick = addTableImageRow;
+addTableImageRowBtn.onclick = () => addTableImageRow();
+
 
 async function uploadImagesMapping(username, existingMapping = {}) {
   const rows = tableImageRows.querySelectorAll("div");
