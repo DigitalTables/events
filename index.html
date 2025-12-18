@@ -422,29 +422,43 @@ card.appendChild(deleteBtn);
  
 /* ================= TABLE IMAGES ================= */
 function addTableImageRow(tableName = "", existingImagePath = null) {
-
   const div = document.createElement("div");
   div.style.marginBottom = "0.5rem";
-if (existingImagePath) {
-  div.dataset.existingImage = existingImagePath;
-}
 
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+  if (existingImagePath) {
+    div.dataset.existingImage = existingImagePath;
+  }
 
-div.innerHTML = `
-  <input type="text" placeholder="Nom de la table" value="${escapeHtml(tableName)}" />
-  <input type="file" accept="image/*" />
-  <button type="button">❌</button>
-`;
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
 
+  // On récupère le nom du fichier existant si disponible
+  const existingFileName = existingImagePath
+    ? existingImagePath.split("/").pop()
+    : "";
+
+  div.innerHTML = `
+    <input type="text" placeholder="Nom de la table" value="${escapeHtml(tableName)}" />
+    <input type="file" accept="image/*" />
+    <span class="existing-file-name">${existingFileName}</span>
+    <button type="button">❌</button>
+  `;
+
+  // Si l’utilisateur choisit un nouveau fichier, mettre à jour l’affichage du nom
+  const fileInput = div.querySelector("input[type='file']");
+  const fileNameSpan = div.querySelector(".existing-file-name");
+  fileInput.onchange = () => {
+    if (fileInput.files[0]) {
+      fileNameSpan.textContent = fileInput.files[0].name;
+    }
+  };
 
   div.querySelector("button").onclick = () => div.remove();
   tableImageRows.appendChild(div);
