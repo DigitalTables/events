@@ -418,9 +418,10 @@ function addTableImageRow(tableName = "") {
 
 addTableImageRowBtn.onclick = addTableImageRow;
 
-async function uploadImagesMapping(username) {
+async function uploadImagesMapping(username, existingMapping = {}) {
   const rows = tableImageRows.querySelectorAll("div");
-  const mapping = {};
+  const mapping = { ...existingMapping };
+
 
   for (const row of rows) {
     const tableInput = row.querySelector("input[type='text']");
@@ -431,7 +432,9 @@ async function uploadImagesMapping(username) {
     const tableName = tableInput.value.trim();
     const file = fileInput.files[0];
 
-    if (!tableName || !file) continue;
+    if (!tableName) continue;
+if (!file) continue; // garde l’image existante
+
 
     // 🔐 Nettoyage minimal du nom de fichier
     const safeTableName = tableName
@@ -483,7 +486,11 @@ createEventBtn.onclick = async () => {
 
   let imagesMapping = {};
   try {
-    imagesMapping = await uploadImagesMapping(username);
+    imagesMapping = await uploadImagesMapping(
+  username,
+  editingEvent?.images_mapping || {}
+);
+
   } catch (e) {
     return alert(e.message);
   }
