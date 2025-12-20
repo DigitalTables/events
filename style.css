@@ -454,3 +454,37 @@ footer {
   color: #fff;
 }
 
+/*==Modal==*/
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 480px;
+  width: 90%;
+}
+
+.modal h3 {
+  margin-top: 0;
+}
+
+.modal pre {
+  background: #f5f5f5;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.modal button {
+  margin-top: 1rem;
+  width: 100%;
+}
+
