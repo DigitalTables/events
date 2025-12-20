@@ -95,6 +95,38 @@
 
     <hr style="margin:2rem 0;">
 
+<!-- ================= CSV HELP MODAL ================= -->
+<div id="csvHelpModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>📄 Format du fichier CSV</h3>
+
+    <p>Votre fichier CSV doit contenir <strong>exactement</strong> les colonnes suivantes :</p>
+
+    <ul>
+      <li><strong>name</strong> — Nom complet de l’invité</li>
+      <li><strong>table</strong> — Nom de la table</li>
+      <li><strong>message</strong> — Message personnalisé (optionnel)</li>
+    </ul>
+
+    <p><strong>Exemple :</strong></p>
+
+    <pre>
+name,table,message
+Jean Duval,Table 1,Bienvenue !
+    </pre>
+
+    <p style="font-size:0.9rem; color:#666;">
+      ✔ séparateur : virgule<br>
+      ✔ minuscules obligatoires<br>
+      ✔ encodage UTF-8
+    </p>
+
+    <button id="closeCsvHelp">J’ai compris</button>
+  </div>
+</div>
+
+
+    
     <!-- ===== IMAGES OPTIONNELLES ===== -->
     <h4>Images par table (optionnel)</h4>
     <p style="font-size:0.9rem; color:#6b5a4a;">
@@ -659,6 +691,15 @@ loadUserUploads().then(enforceEventLimit);
     }
   }
 
+const csvHelpModal = document.getElementById("csvHelpModal");
+const closeCsvHelpBtn = document.getElementById("closeCsvHelp");
+
+let csvHelpShown = false;
+
+    closeCsvHelpBtn.onclick = () => {
+  csvHelpModal.style.display = "none";
+};
+
   /* SHEET MODE */
   else {
     createEventBtn.textContent = "Création Google Sheet...";
@@ -817,6 +858,22 @@ async function enforceEventLimit() {
   publicUrlDiv.innerHTML = "";
 
   createEventBtn.textContent = "Créer l'événement";
+}
+
+  function updateModeUI() {
+  if (modeCsv.checked) {
+    uploadTitle.textContent = "Importer votre fichier CSV";
+    csvInput.style.display = "block";
+
+    if (!csvHelpShown) {
+      csvHelpModal.style.display = "flex";
+      csvHelpShown = true;
+    }
+
+  } else {
+    uploadTitle.textContent = "Les invités seront gérés via Google Sheet";
+    csvInput.style.display = "none";
+  }
 }
 
 
