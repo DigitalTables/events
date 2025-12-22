@@ -437,52 +437,6 @@ card.appendChild(deleteBtn);
   }
 }
 
-<!-- ================= CSV HELP MODAL ================= -->
-<div id="csvHelpModal" style="
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.6);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-">
-  <div style="
-    background:#fff;
-    max-width:520px;
-    width:90%;
-    padding:1.5rem;
-    border-radius:12px;
-    box-shadow:0 20px 40px rgba(0,0,0,0.25);
-  ">
-    <h3 style="margin-top:0;">📄 Import CSV — format requis</h3>
-
-    <p>Le fichier CSV doit contenir <strong>exactement</strong> les colonnes suivantes :</p>
-
-    <pre style="
-      background:#f6f6f6;
-      padding:0.75rem;
-      border-radius:8px;
-      font-size:0.9rem;
-    ">name,table,message</pre>
-
-    <ul style="font-size:0.9rem;">
-      <li><strong>name</strong> : nom de l’invité</li>
-      <li><strong>table</strong> : table attribuée</li>
-      <li><strong>message</strong> : message optionnel</li>
-    </ul>
-
-    <p style="font-size:0.85rem;color:#555;">
-      • Encodage UTF-8 recommandé<br>
-      • 1 ligne = 1 invité<br>
-      • Les noms de colonnes doivent être identiques
-    </p>
-
-    <div style="text-align:right;margin-top:1rem;">
-      <button id="closeCsvHelp">J’ai compris</button>
-    </div>
-  </div>
-</div>
 
  
 /* ================= TABLE IMAGES ================= */
@@ -865,26 +819,6 @@ async function enforceEventLimit() {
   createEventBtn.textContent = "Créer l'événement";
 }
 
-/* ================= CSV HELP MODAL ================= */
-const csvHelpModal = document.getElementById("csvHelpModal");
-const closeCsvHelp = document.getElementById("closeCsvHelp");
-
-function openCsvHelpModal() {
-  csvHelpModal.style.display = "flex";
-}
-
-function closeCsvHelpModal() {
-  csvHelpModal.style.display = "none";
-}
-
-closeCsvHelp.onclick = closeCsvHelpModal;
-
-// Affiche la modale quand "Import CSV" est sélectionné
-modeCsv.addEventListener("change", () => {
-  if (modeCsv.checked) {
-    openCsvHelpModal();
-  }
-});
 
 </script>
 
