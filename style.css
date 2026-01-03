@@ -487,4 +487,10 @@ footer {
   margin-top: 1rem;
   width: 100%;
 }
+.hint, .hint div {
+  font-size: 0.85rem;
+  color: #6b5a4a;
+  margin: 0.25rem 0;
+}
+
 
