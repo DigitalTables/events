@@ -803,7 +803,9 @@ async function enforceEventLimit() {
 
   /* Format pour la date d'update*/
   function formatDateWithTimeZone(dateString) {
-  const date = new Date(dateString);
+  // 1. On parse la date en UTC pour éviter toute ambiguïté
+  const date = new Date(dateString + 'Z'); // Le 'Z' force l'interprétation en UTC
+  // 2. On formate avec le fuseau horaire Europe/Paris
   return new Intl.DateTimeFormat('fr-FR', {
     timeZone: 'Europe/Paris',
     year: 'numeric',
@@ -814,7 +816,6 @@ async function enforceEventLimit() {
     timeZoneName: 'short'
   }).format(date);
 }
-
 
 
   /* Exit Edit Mode */
