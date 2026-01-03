@@ -311,6 +311,12 @@ if (e.google_sheet_url) {
   sheetLink.textContent = "📊 Google Sheet";
   card.appendChild(sheetLink);
 }
+if (e.updated_at) {
+  const updatedAtInfo = document.createElement("div");
+  updatedAtInfo.textContent = "⏰ Dernière modification : " + formatDateWithTimeZone(e.updated_at);
+  updatedAtInfo.style.fontSize = "0.85rem";
+  card.appendChild(updatedAtInfo);
+}
 
 const editBtn = document.createElement("button");
 editBtn.textContent = "✏️ Modifier";
