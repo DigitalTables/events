@@ -803,10 +803,18 @@ async function enforceEventLimit() {
 
   /* Format pour la date d'update*/
   function formatDateWithTimeZone(dateString) {
-  return new Date(dateString).toLocaleString(undefined, {
-    timeZoneName: "short"
+  const date = new Date(dateString);
+  return date.toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
   });
 }
+
 
   /* Exit Edit Mode */
   function exitEditMode() {
