@@ -281,12 +281,12 @@ async function loadUserUploads() {
 
   // ✅ Masquer la création d'événement si au moins un existe
  
-/*  if (events?.length > 0) {
+ if (events?.length > 0) {
     uploadDiv.style.display = "none";
   } else {
     uploadDiv.style.display = "block";
   }
-*/
+
   if (!events?.length) {
     container.textContent = "Aucun événement pour l’instant.";
     return;
