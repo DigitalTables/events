@@ -129,6 +129,9 @@
     <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
 
   </div>
+<button onclick="syncGoogleSheetsPool()">
+  🔄 Mettre à jour le pool Google Sheets
+</button>
 
 <footer>
   <div class="container">
@@ -833,6 +836,38 @@ async function enforceEventLimit() {
   publicUrlDiv.innerHTML = "";
 
   createEventBtn.textContent = "Créer l'événement";
+}
+
+  /* Sync google sheet pool */
+async function syncGoogleSheetsPool() {
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token;
+
+  if (!token) {
+    alert("❌ Connecte-toi");
+    return;
+  }
+
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/sync-google-sheets-pool`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error(data);
+    alert("❌ Erreur sync pool");
+    return;
+  }
+
+  alert(`✅ Pool synchronisé (${data.pool_count} disponibles)`);
 }
 
 
