@@ -129,10 +129,9 @@
     <div id="publicUrl" class="hint" style="margin-top:1rem; text-align:center;"></div>
 
   </div>
-<button id="syncPoolBtn">
-  🔄 Mettre à jour le pool Google Sheets
-</button>
+  
 
+  
 <footer>
   <div class="container">
     <p>© 2026 DigitalTables. Tous droits réservés.</p>
@@ -837,9 +836,12 @@ async function enforceEventLimit() {
 
   createEventBtn.textContent = "Créer l'événement";
 }
-const syncPoolBtn = document.getElementById("syncPoolBtn");
+  
+/* const syncPoolBtn = document.getElementById("syncPoolBtn");
 
 syncPoolBtn.addEventListener("click", syncGoogleSheetsPool);
+ */ 
+  
   /* Sync google sheet pool */
 async function syncGoogleSheetsPool() {
   const { data: session } = await supabase.auth.getSession();
