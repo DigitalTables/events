@@ -264,8 +264,6 @@ usernameInput.onblur = async () => {
 };
 
 
-
-/* ================= DASHBOARD ================= */
 /* ================= DASHBOARD ================= */
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
@@ -738,15 +736,15 @@ loadUserUploads().then(enforceEventLimit);
           ? `https://docs.google.com/spreadsheets/d/${data.sheet_id}/gviz/tq?tqx=out:csv&sheet=Invités`
           : null;
 
-        await supabase
-          .from("events")
-          .update({
-            google_sheet_url: sheetEditUrl,
-            signed_url: publicCsvUrl || null,
-            updated_at: new Date().toISOString()
-            last_sheet_sync_at: new Date().toISOString()
-          })
-          .eq("id", event_id);
+       await supabase
+  .from("events")
+  .update({
+    google_sheet_url: sheetEditUrl,
+    signed_url: publicCsvUrl || null,
+    updated_at: new Date().toISOString(),
+    last_sheet_sync_at: new Date().toISOString()  
+  })
+  .eq("id", event_id);
 
         publicUrlDiv.innerHTML = `
           📊 Google Sheet créée : <br>
