@@ -815,21 +815,18 @@ async function enforceEventLimit() {
 
  /* Format pour la date d'update */
 function formatDateWithTimeZone(dateString) {
-  // ✅ Vérification stricte
   if (!dateString || dateString === '') {
     return 'Date non disponible';
   }
   
   try {
-    // Parse la date en UTC
-    const date = new Date(dateString + 'Z');
+    const date = new Date(dateString);
     
-    // ✅ Vérifier si la date est valide
     if (isNaN(date.getTime())) {
+      console.warn('⚠️ Date invalide:', dateString);
       return 'Date invalide';
     }
     
-    // Formater avec le fuseau horaire Europe/Paris
     return new Intl.DateTimeFormat('fr-FR', {
       timeZone: 'Europe/Paris',
       year: 'numeric',
@@ -844,6 +841,7 @@ function formatDateWithTimeZone(dateString) {
     return 'Date invalide';
   }
 }
+
 
 
   /* Exit Edit Mode */
