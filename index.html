@@ -813,20 +813,36 @@ async function enforceEventLimit() {
 }
   
 
-  /* Format pour la date d'update*/
-  function formatDateWithTimeZone(dateString) {
-  // 1. On parse la date en UTC pour éviter toute ambiguïté
-  const date = new Date(dateString + 'Z'); // Le 'Z' force l'interprétation en UTC
-  // 2. On formate avec le fuseau horaire Europe/Paris
-  return new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZoneName: 'short'
-  }).format(date);
+ /* Format pour la date d'update */
+function formatDateWithTimeZone(dateString) {
+  // ✅ Vérification stricte
+  if (!dateString || dateString === '') {
+    return 'Date non disponible';
+  }
+  
+  try {
+    // Parse la date en UTC
+    const date = new Date(dateString + 'Z');
+    
+    // ✅ Vérifier si la date est valide
+    if (isNaN(date.getTime())) {
+      return 'Date invalide';
+    }
+    
+    // Formater avec le fuseau horaire Europe/Paris
+    return new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    }).format(date);
+  } catch (error) {
+    console.error('Erreur formatage date:', error, 'pour:', dateString);
+    return 'Date invalide';
+  }
 }
 
 
