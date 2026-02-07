@@ -329,6 +329,28 @@ button:hover {
 }
 
 /* ================================
+   LIENS DASHBOARD (espacement)
+================================ */
+#eventsContainer a {
+  display: inline-block;
+  margin: 0.5rem 0.75rem 0.5rem 0;
+  padding: 0.4rem 0.8rem;
+  background: rgba(166, 124, 82, 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+#eventsContainer a:hover {
+  background: rgba(166, 124, 82, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================
    JOTFORM STYLES
 ================================ */
 .digitaltables-jotform {
