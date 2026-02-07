@@ -239,16 +239,17 @@ login.onclick = async () => {
 };
 
 /* ================= USERNAME CHECK ================= */
-async function checkUsernameExists(username) {
+aasync function checkUsernameExists(username) {
   const { data, error } = await supabase
     .from("events")
     .select("user_id")
     .eq("username", username)
+    // ✅ On ne filtre PAS par deleted, on vérifie tous les événements
     .maybeSingle();
 
   if (error) {
     console.error(error);
-    return true; // par sécurité
+    return true; 
   }
 
   return !!data;
