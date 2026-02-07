@@ -239,7 +239,7 @@ login.onclick = async () => {
 };
 
 /* ================= USERNAME CHECK ================= */
-aasync function checkUsernameExists(username) {
+async function checkUsernameExists(username) {
   const { data, error } = await supabase
     .from("events")
     .select("user_id")
