@@ -744,6 +744,7 @@ loadUserUploads().then(enforceEventLimit);
             google_sheet_url: sheetEditUrl,
             signed_url: publicCsvUrl || null,
             updated_at: new Date().toISOString()
+            last_sheet_sync_at: new Date().toISOString()
           })
           .eq("id", event_id);
 
