@@ -307,20 +307,25 @@ button:hover {
 }
 
 /* ================================
-   BOUTON SUPPRIMER DASHBOARD
+   BOUTONS DASHBOARD
 ================================ */
 #eventsContainer button {
-  background: #d9534f;
-  color: #fff;
   border-radius: 6px;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
   margin-top: 0.5rem;
   cursor: pointer;
 }
 
-#eventsContainer button:hover {
-  background: #c9302c;
+/* Style spécifique pour le bouton danger (suppression) */
+#eventsContainer button.danger {
+  background: #d9534f !important;
+  color: #fff !important;
+  border: 1px solid #c9302c !important;
+}
+
+#eventsContainer button.danger:hover {
+  background: #c9302c !important;
 }
 
 /* ================================
@@ -492,5 +497,3 @@ footer {
   color: #6b5a4a;
   margin: 0.25rem 0;
 }
-
-
