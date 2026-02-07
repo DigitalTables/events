@@ -265,6 +265,7 @@ usernameInput.onblur = async () => {
 
 
 /* ================= DASHBOARD ================= */
+/* ================= DASHBOARD ================= */
 async function loadUserUploads() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
@@ -279,21 +280,23 @@ async function loadUserUploads() {
   const container = document.getElementById("eventsContainer");
   container.innerHTML = "";
 
-  // ✅ Masquer la création d'événement si au moins un existe
- 
- if (events?.length > 0) {
+  // ✅ Afficher ou masquer la section de création selon les événements existants
+  const hasEvents = events && events.length > 0;
+  
+  if (hasEvents) {
     uploadDiv.style.display = "none";
+    dashboardDiv.style.display = "block";
   } else {
     uploadDiv.style.display = "block";
-  }
-
-  if (!events?.length) {
-    container.textContent = "Aucun événement pour l’instant.";
+    dashboardDiv.style.display = "block";
+    container.textContent = "Aucun événement pour l'instant.";
     return;
   }
 
+  // Afficher les événements existants
   for (const e of events) {
-   const card = document.createElement("div");
+    const card = document.createElement("div");
+   
 
 const title = document.createElement("h4");
 title.textContent = e.username;
@@ -794,14 +797,21 @@ function enterEditMode(event) {
 async function enforceEventLimit() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
+  if (!user) return;
+  
   const { data: events } = await supabase
     .from("events")
     .select("id")
     .eq("user_id", user.id)
     .eq("deleted", false);
 
-  createEventBtn.disabled = events.length >= 1;
+  // ✅ Gestion sécurisée : si events est null/undefined, on considère 0 événements
+  const eventCount = events?.length || 0;
+  createEventBtn.disabled = eventCount >= 1;
+  
+  console.log(`Events count: ${eventCount}, Button disabled: ${createEventBtn.disabled}`);
 }
+  
 
   /* Format pour la date d'update*/
   function formatDateWithTimeZone(dateString) {
