@@ -21,7 +21,7 @@ export async function getPrivateCsv(username, password, userId) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${supabaseAnonKey}`
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
     },
     body: JSON.stringify({ path: `guests_${username}.csv`, password, userId })
   });
