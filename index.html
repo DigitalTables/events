@@ -271,6 +271,55 @@ function onLogin() {
   loadUserUploads().then(enforceEventLimit);
 }
 
+ function checkEmailConfirmation() {
+  supabase.auth.getUser().then(({ data: { user }, error }) => {
+    if (user && !user.email_confirmed_at) {
+      // Email non confirmé
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        padding: 1rem;
+        margin: 1rem auto;
+        max-width: 600px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+      `;
+      banner.innerHTML = `
+        ⚠️ Votre email n'est pas encore confirmé.
+        <br>
+        Vérifiez votre boîte mail (${user.email}) pour activer votre compte.
+        <br>
+        <button id="resendConfirmation" style="margin-top:0.5rem;">
+          📧 Renvoyer l'email
+        </button>
+      `;
+      
+      document.querySelector('header').after(banner);
+      
+      // Bouton pour renvoyer l'email
+      document.getElementById('resendConfirmation').onclick = async () => {
+        try {
+          const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email: user.email
+          });
+          
+          if (error) throw error;
+          alert('✅ Email de confirmation renvoyé !');
+        } catch (err) {
+          alert('❌ Erreur : ' + err.message);
+        }
+      };
+    }
+  });
+}
+  
+  checkEmailConfirmation();
+}
+
+  
 function onLogout() {
   authDiv.style.display = "block";
   uploadDiv.style.display = "none";
@@ -363,63 +412,7 @@ login.onclick = async () => {
   if (error) alert(error.message);
 };
 
-  function checkEmailConfirmation() {
-  supabase.auth.getUser().then(({ data: { user }, error }) => {
-    if (user && !user.email_confirmed_at) {
-      // Email non confirmé
-      const banner = document.createElement('div');
-      banner.style.cssText = `
-        background: #fff3cd;
-        border: 2px solid #ffc107;
-        padding: 1rem;
-        margin: 1rem auto;
-        max-width: 600px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-      `;
-      banner.innerHTML = `
-        ⚠️ Votre email n'est pas encore confirmé.
-        <br>
-        Vérifiez votre boîte mail (${user.email}) pour activer votre compte.
-        <br>
-        <button id="resendConfirmation" style="margin-top:0.5rem;">
-          📧 Renvoyer l'email
-        </button>
-      `;
-      
-      document.querySelector('header').after(banner);
-      
-      // Bouton pour renvoyer l'email
-      document.getElementById('resendConfirmation').onclick = async () => {
-        try {
-          const { error } = await supabase.auth.resend({
-            type: 'signup',
-            email: user.email
-          });
-          
-          if (error) throw error;
-          alert('✅ Email de confirmation renvoyé !');
-        } catch (err) {
-          alert('❌ Erreur : ' + err.message);
-        }
-      };
-    }
-  });
-}
-
-// Appeler après login
-function onLogin() {
-  authDiv.style.display = "none";
-  uploadDiv.style.display = "block";
-  logoutBtn.style.display = "inline-block";
-  dashboardDiv.style.display = "block";
-  loadUserUploads().then(enforceEventLimit);
-  
-  // ✅ AJOUT
-  checkEmailConfirmation();
-}
-
+ 
 
 /* ================= USERNAME CHECK ================= */
 async function checkUsernameExists(username) {
