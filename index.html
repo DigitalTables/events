@@ -263,15 +263,7 @@ supabase.auth.onAuthStateChange((_e, s) => {
   s ? onLogin() : onLogout();
 });
 
-function onLogin() {
-  authDiv.style.display = "none";
-  uploadDiv.style.display = "block";
-  logoutBtn.style.display = "inline-block";
-  dashboardDiv.style.display = "block";
-  loadUserUploads().then(enforceEventLimit);
-}
-
- function checkEmailConfirmation() {
+function checkEmailConfirmation() {
   supabase.auth.getUser().then(({ data: { user }, error }) => {
     if (user && !user.email_confirmed_at) {
       // Email non confirmé
@@ -316,8 +308,22 @@ function onLogin() {
   });
 }
   
+
+function onLogin() {
+  authDiv.style.display = "none";
+  uploadDiv.style.display = "block";
+  logoutBtn.style.display = "inline-block";
+  dashboardDiv.style.display = "block";
+  loadUserUploads().then(enforceEventLimit);
+  
+  // ✅ AJOUT
   checkEmailConfirmation();
 }
+
+
+
+ 
+
 
   
 function onLogout() {
