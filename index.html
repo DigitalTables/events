@@ -145,7 +145,72 @@
 <script type="module">
 import { supabase, SUPABASE_URL, getPrivateCsv } from './supabase.js';
 import Papa from "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm";
+/* ================= GESTION CONFIRMATION EMAIL ================= */
 
+/**
+ * Gère la confirmation d'email après clic sur le lien
+ * Supporte à la fois les formats hash (#) et query (?)
+ */
+async function handleEmailConfirmation() {
+  // Extraire les paramètres de l'URL (hash et query)
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  const queryParams = new URLSearchParams(window.location.search);
+  
+  // Chercher le token dans hash ou query
+  const access_token = hashParams.get('access_token') || queryParams.get('token');
+  const type = hashParams.get('type') || queryParams.get('type');
+  const refresh_token = hashParams.get('refresh_token');
+  
+  console.log('🔍 Détection confirmation email:', { access_token: !!access_token, type });
+  
+  // Si c'est une confirmation d'email
+  if (access_token && type === 'signup') {
+    console.log('📧 Traitement de la confirmation email...');
+    
+    try {
+      // Méthode 1 : Utiliser setSession (recommandé pour les liens magiques)
+      const { data, error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: refresh_token || ''
+      });
+      
+      if (error) {
+        console.error('❌ Erreur setSession:', error);
+        
+        // Méthode 2 : Fallback avec verifyOtp
+        const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: access_token,
+          type: 'signup'
+        });
+        
+        if (otpError) throw otpError;
+        
+        console.log('✅ Email confirmé via OTP:', otpData);
+        alert('✅ Email confirmé avec succès ! Bienvenue !');
+      } else {
+        console.log('✅ Email confirmé via setSession:', data);
+        alert('✅ Email confirmé avec succès ! Vous êtes maintenant connecté.');
+      }
+      
+      // Nettoyer l'URL (enlever les paramètres)
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Forcer un rafraîchissement de l'état d'auth
+      await supabase.auth.refreshSession();
+      
+    } catch (error) {
+      console.error('❌ Erreur confirmation email:', error);
+      alert(`❌ Erreur lors de la confirmation : ${error.message}\n\nLe lien a peut-être expiré. Veuillez créer un nouveau compte.`);
+      
+      // Nettoyer l'URL même en cas d'erreur
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+}
+
+// ⚠️ IMPORTANT : Appeler cette fonction AVANT tout autre code
+handleEmailConfirmation();
+  
 /* ================= DOM ================= */
 const authDiv = document.getElementById("auth");
 const uploadDiv = document.getElementById("upload");
@@ -219,15 +284,75 @@ logoutBtn.onclick = async () => {
 
 /* ================= SIGNUP / LOGIN ================= */
 signup.onclick = async () => {
-  const { error } = await supabase.auth.signUp({
-    email: email.value,
-    password: password.value
-  });
-  if (error) return alert(error.message);
-  await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value
-  });
+  const emailValue = email.value.trim();
+  const passwordValue = password.value.trim();
+  
+  if (!emailValue || !passwordValue) {
+    return alert("❌ Veuillez remplir tous les champs.");
+  }
+  
+  // Validation email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailValue)) {
+    return alert("❌ Email invalide.");
+  }
+  
+  // Validation mot de passe
+  if (passwordValue.length < 6) {
+    return alert("❌ Le mot de passe doit contenir au moins 6 caractères.");
+  }
+  
+  signup.textContent = "Création du compte...";
+  signup.disabled = true;
+  
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: emailValue,
+      password: passwordValue,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        // Données additionnelles optionnelles
+        data: {
+          full_name: '', // Vous pouvez ajouter un champ nom si nécessaire
+        }
+      }
+    });
+    
+    if (error) throw error;
+    
+    // Vérifier si l'email existe déjà
+    if (data?.user?.identities?.length === 0) {
+      alert('❌ Cet email est déjà utilisé. Essayez de vous connecter.');
+      return;
+    }
+    
+    // Vérifier si la confirmation est requise
+    if (data.user && !data.session) {
+      // Confirmation email requise
+      alert(`✅ Compte créé avec succès !
+
+📧 Un email de confirmation a été envoyé à :
+${emailValue}
+
+Veuillez vérifier votre boîte mail (et vos spams) et cliquer sur le lien pour activer votre compte.
+
+⏱️ Le lien expire dans 24 heures.`);
+    } else if (data.session) {
+      // Pas de confirmation requise ou auto-login
+      alert('✅ Compte créé et connecté !');
+    }
+    
+    // Réinitialiser les champs
+    email.value = '';
+    password.value = '';
+    
+  } catch (error) {
+    console.error('Erreur signup:', error);
+    alert('❌ Erreur : ' + error.message);
+  } finally {
+    signup.textContent = "Créer un compte";
+    signup.disabled = false;
+  }
 };
 
 login.onclick = async () => {
@@ -237,6 +362,64 @@ login.onclick = async () => {
   });
   if (error) alert(error.message);
 };
+
+  function checkEmailConfirmation() {
+  supabase.auth.getUser().then(({ data: { user }, error }) => {
+    if (user && !user.email_confirmed_at) {
+      // Email non confirmé
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        padding: 1rem;
+        margin: 1rem auto;
+        max-width: 600px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+      `;
+      banner.innerHTML = `
+        ⚠️ Votre email n'est pas encore confirmé.
+        <br>
+        Vérifiez votre boîte mail (${user.email}) pour activer votre compte.
+        <br>
+        <button id="resendConfirmation" style="margin-top:0.5rem;">
+          📧 Renvoyer l'email
+        </button>
+      `;
+      
+      document.querySelector('header').after(banner);
+      
+      // Bouton pour renvoyer l'email
+      document.getElementById('resendConfirmation').onclick = async () => {
+        try {
+          const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email: user.email
+          });
+          
+          if (error) throw error;
+          alert('✅ Email de confirmation renvoyé !');
+        } catch (err) {
+          alert('❌ Erreur : ' + err.message);
+        }
+      };
+    }
+  });
+}
+
+// Appeler après login
+function onLogin() {
+  authDiv.style.display = "none";
+  uploadDiv.style.display = "block";
+  logoutBtn.style.display = "inline-block";
+  dashboardDiv.style.display = "block";
+  loadUserUploads().then(enforceEventLimit);
+  
+  // ✅ AJOUT
+  checkEmailConfirmation();
+}
+
 
 /* ================= USERNAME CHECK ================= */
 async function checkUsernameExists(username) {
