@@ -259,8 +259,10 @@ updateModeUI();
 supabase.auth.getSession().then(({ data }) => {
   data.session ? onLogin() : onLogout();
 });
-supabase.auth.onAuthStateChange((_e, s) => {
-  s ? onLogin() : onLogout();
+supabase.auth.onAuthStateChange((event, s) => {
+  if (event === 'SIGNED_IN')  onLogin();
+  if (event === 'SIGNED_OUT') onLogout();
+  // TOKEN_REFRESHED, USER_UPDATED, etc. → ignorés volontairement
 });
 
 function checkEmailConfirmation() {
@@ -465,9 +467,13 @@ async function loadUserUploads() {
   const hasEvents = events && events.length > 0;
   
   if (hasEvents) {
+  // Ne pas masquer le formulaire si on est en train d'éditer
+  if (!editingEvent) {
     uploadDiv.style.display = "none";
-    dashboardDiv.style.display = "block";
-  } else {
+  }
+  dashboardDiv.style.display = "block";
+} 
+  else {
     uploadDiv.style.display = "block";
     dashboardDiv.style.display = "block";
     container.textContent = "Aucun événement pour l'instant.";
