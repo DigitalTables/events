@@ -47,14 +47,39 @@ const defaultMessage = "Merci pour votre présence avec nous !";
 let guests = [];
 let imagesMapping = {};
 
-// Paramètre event dans l'URL
 const params = new URLSearchParams(window.location.search);
 const eventUsername = params.get("event");
 
 if (!eventUsername) {
-  resultEl.textContent = "Aucun identifiant d’événement fourni dans l’URL.";
+  resultEl.textContent = "Aucun identifiant d'événement fourni dans l'URL.";
 } else {
   loadEvent(eventUsername);
+}
+
+// ✅ NOUVEAU : parsing robuste pour CSV avec séparateur ";"
+// Gère le format non-standard où toute la ligne est encapsulée dans des guillemets
+function parseGuestCsv(csvText) {
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    delimiter: ";"
+  });
+
+  return parsed.data.map(row => {
+    // Si toute la ligne a été lue comme un seul champ (guillemets autour de la ligne entière)
+    // on re-découpe manuellement sur ";"
+    if (row.name && !row.table) {
+      const parts = row.name.split(";");
+      if (parts.length >= 3) {
+        return {
+          name: parts[0].trim(),
+          table: parts[1].trim(),
+          message: parts.slice(2).join(";").trim()
+        };
+      }
+    }
+    return row;
+  }).filter(g => g.name);
 }
 
 async function loadEvent(username) {
@@ -74,47 +99,44 @@ async function loadEvent(username) {
 
   const publicJsonUrl = `${supabase.supabaseUrl}/storage/v1/object/public/public-guests/guests_${username}.json`;
 
-  // ⭐ NEW — test si le JSON public existe
   let publicJsonExists = false;
   try {
     const test = await fetch(publicJsonUrl, { method: "HEAD" });
     publicJsonExists = test.ok;
   } catch (_) {}
 
-  // 🎯 CAS PUBLIC (CSV ou Google Sheet public)
   if (!data.is_private) {
     if (publicJsonExists) {
       guests = await fetch(publicJsonUrl).then(r => r.json());
       fillDatalist();
       return;
+    } else if (data.google_sheet_url) {
+      try {
+        const sheetIdMatch = data.google_sheet_url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        const sheetId = sheetIdMatch ? sheetIdMatch[1] : null;
+        const sheetCsvUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0` : null;
+        if (!sheetCsvUrl) throw new Error("Impossible de générer l'URL CSV depuis la Google Sheet.");
+        console.log("url google sheet: ", sheetCsvUrl);
+        const csvText = await fetch(sheetCsvUrl).then(r => {
+          if (!r.ok) throw new Error("Impossible de charger la Google Sheet publique.");
+          return r.text();
+        });
+        // Google Sheets exporte en virgules → on garde le parsing standard
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+        guests = parsed.data.filter(g => g.name);
+        fillDatalist();
+        console.log("✅ Invités chargés depuis Google Sheet publique :", guests.length);
+        return;
+      } catch(e) {
+        console.error(e);
+        resultEl.textContent = "Erreur chargement Google Sheet publique : " + e.message;
+        return;
+      }
     }
-  else if (data.google_sheet_url) {
-  try {
-    const sheetIdMatch = data.google_sheet_url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-const sheetId = sheetIdMatch ? sheetIdMatch[1] : null;
-const sheetCsvUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0` : null;
-if (!sheetCsvUrl) throw new Error("Impossible de générer l'URL CSV depuis la Google Sheet.");
-    console.log("url google sheet: ",sheetCsvUrl);
-    const csvText = await fetch(sheetCsvUrl).then(r => {
-      if (!r.ok) throw new Error("Impossible de charger la Google Sheet publique.");
-      return r.text();
-    });
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    guests = parsed.data.filter(g => g.name); // filtrer lignes vides
-    fillDatalist();
-    console.log("✅ Invités chargés depuis Google Sheet publique :", guests.length);
-    return; 
-  } catch(e) {
-    console.error(e);
-    resultEl.textContent = "Erreur chargement Google Sheet publique : " + e.message;
-    return;
-  }
-}
     resultEl.textContent = "Erreur : fichier public introuvable.";
     return;
   }
 
-  // 🎯 CAS PRIVÉ (CSV privé ou Google Sheet privé avant/après sync)
   const pwd = prompt("🔒 Cet événement est privé. Entrez le mot de passe :");
   if (!pwd || pwd !== data.event_password) {
     resultEl.textContent = "❌ Mot de passe incorrect.";
@@ -126,14 +148,13 @@ if (!sheetCsvUrl) throw new Error("Impossible de générer l'URL CSV depuis la G
     const userId = session.data.session?.user.id;
     if (!userId) throw new Error("Utilisateur non connecté");
 
-    // ⭐ NEW — si Google Sheet privé a été sync → JSON n'existe PAS mais CSV privé OUI
     const signedUrl = await getPrivateCsv(username, pwd, userId);
-
     const csvText = await fetch(signedUrl).then(r => r.text());
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    guests = parsed.data;
+
+    // ✅ Utilisation du nouveau parsing robuste
+    guests = parseGuestCsv(csvText);
     fillDatalist();
-    console.log("Invités chargés (CSV privé ou sync)");
+    console.log("✅ Invités chargés (CSV privé) :", guests.length);
   } catch(e) {
     console.error(e);
     resultEl.textContent = "Erreur chargement CSV privé : " + e.message;
@@ -198,10 +219,7 @@ inputEl.addEventListener("change", e => searchAndDisplay(e.target.value));
 resultEl.addEventListener("mousedown", e => {
   const name = e.target.dataset?.name;
   if (!name) return;
-
-  // Empêche le blur d'interrompre le clic
   e.preventDefault();
-
   inputEl.value = name;
   const guest = guests.find(g => normalize(g.name) === normalize(name));
   if (guest) showGuest(guest);
