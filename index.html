@@ -993,9 +993,12 @@ async function enforceEventLimit() {
     .eq("user_id", user.id)
     .eq("deleted", false);
 
-  // ✅ Gestion sécurisée : si events est null/undefined, on considère 0 événements
   const eventCount = events?.length || 0;
-  createEventBtn.disabled = eventCount >= 1;
+
+  // Ne pas désactiver le bouton si on est en mode édition
+  if (!editingEvent) {
+    createEventBtn.disabled = eventCount >= 1;
+  }
   
   console.log(`Events count: ${eventCount}, Button disabled: ${createEventBtn.disabled}`);
 }
