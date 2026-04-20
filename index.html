@@ -313,12 +313,14 @@ function checkEmailConfirmation() {
 
 function onLogin() {
   authDiv.style.display = "none";
-  uploadDiv.style.display = "block";
   logoutBtn.style.display = "inline-block";
+
+  // Si on est déjà en mode édition, ne rien toucher
+  if (editingEvent) return;
+
+  uploadDiv.style.display = "block";
   dashboardDiv.style.display = "block";
   loadUserUploads().then(enforceEventLimit);
-  
-  // ✅ AJOUT
   checkEmailConfirmation();
 }
 
