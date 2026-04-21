@@ -847,9 +847,10 @@ if (!editingEvent && isPrivate && !eventPassword) {
   .eq("id", event_id);
 
 alert("✅ Fichier CSV correctement envoyé !");
-
-loadUserUploads().then(enforceEventLimit);
-
+const { data: freshEvent } = await supabase
+  .from("events").select("*").eq("id", editingEvent.id).single();
+if (freshEvent) { editingEvent = freshEvent; enterEditMode(freshEvent); }
+await loadUserUploads().then(enforceEventLimit);
 
     } catch (err) {
       alert("❌ Erreur création événement CSV : " + (err.message || err));
@@ -878,14 +879,15 @@ loadUserUploads().then(enforceEventLimit);
 
       if (isEditing) {
         // ✏️ UPDATE événement existant
-        const { error } = await supabase
-          .from("events")
-          .update({
-            images_mapping: imagesMapping,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", editingEvent.id);
-        if (error) throw error;
+      
+const { error } = await supabase
+  .from("events")
+  .update({ images_mapping: imagesMapping, updated_at: new Date().toISOString() })
+  .eq("id", editingEvent.id);
+if (error) throw error;
+const { data: freshEvent } = await supabase
+  .from("events").select("*").eq("id", editingEvent.id).single();
+if (freshEvent) { editingEvent = freshEvent; enterEditMode(freshEvent); }
       } else {
         // ➕ CRÉATION événement
         const { data: insertedEvent, error } = await supabase
