@@ -259,10 +259,12 @@ updateModeUI();
 supabase.auth.getSession().then(({ data }) => {
   data.session ? onLogin() : onLogout();
 });
-supabase.auth.onAuthStateChange((event, s) => {
-  if (event === 'SIGNED_IN')  onLogin();
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    session ? onLogin() : onLogout();
+  }
   if (event === 'SIGNED_OUT') onLogout();
-  // TOKEN_REFRESHED, USER_UPDATED, etc. → ignorés volontairement
+
 });
 
 function checkEmailConfirmation() {
