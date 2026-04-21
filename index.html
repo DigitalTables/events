@@ -857,7 +857,7 @@ await loadUserUploads().then(enforceEventLimit);
     } catch (err) {
       alert("❌ Erreur création événement CSV : " + (err.message || err));
     } finally {
-      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.textContent = editingEvent ? "💾 Enregistrer les modifications" : "✅ Créer l'événement";
       createEventBtn.disabled = false;
     }
   }
@@ -950,7 +950,7 @@ if (freshEvent) { editingEvent = freshEvent; enterEditMode(freshEvent); }
     } catch (err) {
       alert("❌ Erreur création Google Sheet : " + (err.message || err));
     } finally {
-      createEventBtn.textContent = "Créer l'événement";
+      createEventBtn.textContent = editingEvent ? "💾 Enregistrer les modifications" : "✅ Créer l'événement";
       createEventBtn.disabled = false;
     }
   }
